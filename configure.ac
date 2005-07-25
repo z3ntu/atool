@@ -1,0 +1,10 @@
+AC_INIT(atool, 0.30.0, oskar@osk.mine.nu)
+AC_PATH_PROGS(PERL, perl perl5)
+AC_CONFIG_SRCDIR(atool.in)
+AC_CONFIG_FILES([atool atool.1 atool.spec Makefile], [chmod a+x atool])
+AC_CONFIG_COMMANDS([acat-link], [ln -f -s atool acat])
+AC_CONFIG_COMMANDS([adiff-link], [ln -f -s atool adiff])
+AC_CONFIG_COMMANDS([als-link], [ln -f -s atool als])
+AC_CONFIG_COMMANDS([apack-link], [ln -f -s atool apack])
+AC_CONFIG_COMMANDS([aunpack-link], [ln -f -s atool aunpack])
+AC_OUTPUT

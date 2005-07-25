@@ -1,0 +1,101 @@
+# Makefile.in - Makefile for atool
+#
+# Copyright (C) 2001, 2002, 2003, 2004, 2005 Oskar Liljeblad
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+
+# Location of source code files
+srcdir = @srcdir@
+
+# Root of installation tree (architecture-independent files)
+prefix = @prefix@
+
+# Root of installation tree (architecture-dependent files)
+exec_prefix = @exec_prefix@
+
+# Path where the atool executables are installed
+bindir = @bindir@
+
+# Path where the atool manpages are installed
+mandir = @mandir@
+
+# Directory in archive created by `make dist'
+distdir = @PACKAGE_TARNAME@-@PACKAGE_VERSION@
+
+# Files created by the configure script
+autoconf_targets = atool Makefile atool.1 atool.spec
+
+.PHONY: all clean distclean maintclean install debian rpm
+
+all: $(autoconf_targets)
+
+$(autoconf_targets): %: $(srcdir)/%.in config.status
+	./config.status $@
+
+$(srcdir)/configure: $(srcdir)/configure.ac
+	cd $(srcdir) && autoconf
+
+config.status: $(srcdir)/configure
+	./config.status --recheck
+
+clean:
+	rm -f $(srcdir)/debian/atool.{postinst.debhelper,prerm.debhelper}
+	rm -f $(srcdir)/debian/{atool.substvars,files,substvars,build-stamp}
+	rm -rf $(srcdir)/debian/atool
+
+distclean: clean
+	rm -f acat adiff als apack aunpack
+	rm -f config.log Makefile
+	rm -f atool atool.1 atool.spec
+	rm -rf autom4te.cache
+	rm -f config.status
+
+maintclean: distclean
+	rm -f $(srcdir)/configure
+
+install: all
+	install -d $(DESTDIR)$(bindir)
+	install -m 755 atool $(DESTDIR)$(bindir)
+	ln -s -f atool $(DESTDIR)$(bindir)/aunpack
+	ln -s -f atool $(DESTDIR)$(bindir)/apack
+	ln -s -f atool $(DESTDIR)$(bindir)/acat
+	ln -s -f atool $(DESTDIR)$(bindir)/als
+	ln -s -f atool $(DESTDIR)$(bindir)/adiff
+	install -d $(DESTDIR)$(mandir)/man1
+	install -m 644 atool.1 $(DESTDIR)$(mandir)/man1
+	ln -s -f atool.1 $(DESTDIR)$(mandir)/man1/aunpack.1
+	ln -s -f atool.1 $(DESTDIR)$(mandir)/man1/apack.1
+	ln -s -f atool.1 $(DESTDIR)$(mandir)/man1/acat.1
+	ln -s -f atool.1 $(DESTDIR)$(mandir)/man1/als.1
+	ln -s -f atool.1 $(DESTDIR)$(mandir)/man1/adiff.1
+
+dist:
+	rm -rf $(distdir)
+	mkdir -p $(distdir)
+	cp -L $(srcdir)/{COPYING,ChangeLog,NEWS,README,TODO} $(distdir)
+	cp -L $(srcdir)/{atool.1.in,atool.in,atool.spec.in} $(distdir)
+	cp -L $(srcdir)/{Makefile.in,configure.ac,configure} $(distdir)
+	mkdir -p $(distdir)/debian
+	cp -a $(srcdir)/debian/{changelog,control,copyright,rules} $(distdir)/debian
+	chmod a-s $(distdir)
+	fakeroot tar cvfz $(distdir).tar.gz $(distdir)
+	rm -rf $(distdir)
+
+debian:
+	cd $(srcdir) && dpkg-buildpackage -rfakeroot -us -uc -sd -b
+
+rpm: atool.spec
+	rpm -bb --clean atool.spec

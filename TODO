@@ -1,0 +1,291 @@
+add option to assume format with -F in some situations (like tar.gz)?
+add option to always assume -e? and add some option for the reverse (-s, --single)
+assume -e when passing a single directory as argument?
+
+change back error messages to:
+   cannot foo `bar': No such file or directory
+  make function to format error message?
+
+have autoconf generate files in debian subdir as well?
+
+in readconfig, add datatype checking to options (bool/str/int/..)
+
+add 'atest': test archive integrity
+add compression level control arguments: store (0) or 1-9
+make sure atool has non-zero rc when acat can't find a file (.arc files and possibly other)
+
+improve error message when some program doesn't exist (now gets unnecessary lines)
+
+complete arepack!!
+arepack to repack archives?
+  arepack existing.tar existing.zip?			OK done
+  arepack SOURCE DEST					OK done
+  arepack -F DESTFORMAT -e SOURCE1 SOURCE2..		dest format
+  arepack -e FORMAT SOURCE DEST				source format? ??
+
+tests:
+  does gzip support --?
+  does tar support -z?
+  does tar support -I?
+  does tar support --?
+  does zip treat *?[]\ chars in filenames specially?
+
+use "--" with gzip and others?
+
+Reasons to rewrite in C:
+  - use manual ZIP code so that we can extract archive with '../foo' files too!
+    tar fails entirely when the archive contains '../xxx' members.
+  - the option --save-outdir in extract-to mode could be implemented
+    easier.
+  - multiple commands per action more easily (same with perl tho)
+  - always identify format using magic values, ignoring extension (fast!)
+  - i18n much easier (and faster)
+
+Bugs
+  implement list command for single compressed archives? only gzip supports -l
+  consider:
+      apack dummy.tar.gz /etc/hostname
+      mkdir etc
+      aunpack dummy.tar.gz
+    Archive is now extracted with file as dummy/etc/hostname
+    Should it be dummy/hostname or etc-1/hostname instead?
+
+Other formats
+  add support for SEA arc.
+  add support for szip (hard because its interface is different from gzip)
+  make an ACE archive (using winace stuff), test ACE extraction!
+  add support for DEB files
+     list: 	dpkg-deb -c FILE.deb
+     extract:	dpkg-deb -x FILE.deb $outdir/CONTENTS
+		dpkg-deb -e FILE.deb $outdir/DEBIAN
+  JAR/ZIP:
+    Implement 'use_jar_for_zip' - use jar for zip archives (fastjar) - test
+    Rename 'use_zip_for_jar' - use zip for jar archives - test
+    Enable add command for jar archives!
+
+
+Other features
+  make a script to detect system settings and configure atool appropriately
+  Make it possible to send additional arguments to RAR etc. engine configurable via command line?
+    especially adiff diff -ruN (note the N) option
+
+--------------------------------------------------------------------------------
+
+libarchive:
+  OpenArchive(fd)->archive
+  CloseArchive(archive)
+  GetType(archive)
+
+  BeginJob(archive)->job
+  PerformJob(job)
+  EndJob(job)
+  
+  GetError(job)
+  ErrorManger(job,callback)
+  ProgressManager(job,callback)
+
+  CreateArchive(file)->archive
+
+  FileDescriptor
+    close()
+    read(data,amount)
+    write(data,amount)
+    seek(pos,whence)
+  
+  FileIterator(job,fileselector,filecallback)
+  
+  DeleteFile(job,fh)
+  ExtractFile(job,fh,outfd)
+  ReplaceFile(job,fh,infile)
+  
+  AddFile(job,filename,extfile)
+
+---
+
+verbosity levels:
+  0 default, quiet
+  1 verbose, print filenames
+  2 very verbose, print long list format
+
+extract: what to when local file exists, only when archive contains one file
+(and not in interactive mode)
+  * (m)ove to subdirectory
+  * (r)ename
+  * move files to subdir, rename directory
+  * for interactive mode only: (o)verwrite
+
+how to extract single compressed file
+  * delete original file afterwards
+  * keep original file
+  * don't extract at all (refuse)		
+
+add:
+  * apack: create new archive (refuse if existing exists)
+  * apack -a: add to existing archives (create if necessary)
+
+---
+
+MAJOR options:
+
+  aunpack	-X	-x [DIR]	extract to dir
+  apack		-A	-a		add files to archive (or create)
+  apack		-C	-c		create only
+  als		-L	-l		list files in archive
+  acat		-P	-c/-p		print file (to standard out) in archive
+
+  adiff		-D	-d		print difference between two archives
+  afind		-F	-f		find files in archive (emulate find)		[?]
+
+  arepack	-R	-r		extract and pack archives
+
+
+
+als ARCHIVE1..
+  -l		-l (long) like ls
+  -f		-f (classify) like ls
+  -m[TYPE]	from all archives, list only files matching (remaining args are matches)
+
+prev: als -e *.tar		now:  als *.tar
+prev: als foo.tar f*		now:  als foo.tar -m f*
+
+aunpack ARCHIVE1..
+  -X DIR	where to extract to (otherwise be smart)
+  -m[TYPE]	from all archives, extract only files matching (remaining args are matches)
+
+apack ARCHIVE FILE1..
+  -a		add files if archive already exists (without -a, refuse to overwrite existing)
+  -e		all arguments are files (or dirs) to compress individually
+  -F FORMAT	force file format
+
+  -f		allow overwriting of archives (clobber). NOTE: for safety, this implies
+
+
+--------------------------------------------------------------------------------
+
+New rules format:
+
+# This document shows how a future rules file format for atool could look. It
+# was written to outline what was necessary for such a format. It is quite
+# possible this format will never become a reality due to its complexity.
+
+# use ; to separate commands!
+
+# rules and configuration files are the same
+
+noinclude		# don't include default rules/configuration file!
+			# (otherwise /etc/atool.rules will be included first)
+			# useful if you want to make your own rules completely
+
+set path_zip "foobar"	# example of variable set in a configuration file
+			# (can only be done after option declared in format)
+
+# the extract command defined here also handles extract-in (only outdir changes)
+# the create command refuses to create an existing archive
+# the add command will turn into a create command if the archive doesn't exist
+# the print command outputs a file in the archive to standard out
+
+# variable namespace:
+#   read-only variables - $outdir, $archive, $args
+#   format-local variables - declared with 'variable'
+#   options - declared with option
+
+# FIXME: what about about special exit codes (zip)? CHECK atool
+
+format {
+  name { zip jar }		# a name for users to use in -F option (force format)
+  extension { .zip .jar }	# possible file extensions (ignored?)
+  magic	    { PK\003\004 }	# magic bytes (kinda regex?)
+  option string path_zip "zip"
+  option string path_unzip "unzip"
+  command extract    { $path_unzip "-d" $outdir $archive $args }
+  command add,create { $path_zip "-r" $archive $args }
+  command print	     { $path_unzip "-p" $archive $args }
+  command list 	     { $path_unzip "-l" $archive $args }
+  command common  {
+    [ $verbosity >  1 ] "-v"		# this format means: add "-v" only if $verbosity > 1
+    [ $verbosity <  0 ] "-qq"		# (the first string after [] applies, or block if { } )
+    [ $verbosity == 0 ] "-q"
+  }
+  multiarchive true	# specifies that this archive may contain multiple files
+  needs_cwd false	# specifies that this archive doesn't need to cwd to outdir on extract
+  			# (technically we could autodetect this by seeing of $outdir is referenced
+			# in the extract command)
+}
+
+format {
+  name		{ lha lzh }
+  extension	{ .lha .lzh }
+  magic		{ "..-lh[01234567 d]-" "..-lz[45s]-" }	# what about >20 byte x ; 2 string -lh6-
+  option string path_lha "lha"
+  command common { $path_lha }
+  command extract { "x" $archive $args $outdirslash }	# outdirslash = outdir that ends in slash
+  command add,create { "a" $archive $args }
+  command print { "p" $archive $args }
+  command list {
+    "a"
+    [ $verbosity >= 3 ] "v"
+    [ $verbosity =  2 ] "l"
+    [ $verbosity <= 1 ] "lq"
+  }
+  multiarchive true
+  needs_cwd false
+}
+
+format {
+  name		{ tar[+.]gz(ip)? }
+  extension	{ .tgz .tar.gz }
+  option string path_tar "tar"				# this one assume tar supports -z
+  variable string opts
+  command common { $path_tar [ $verbosity >= 1 ] [ $opts = "v" ] }	# a conditional
+  command print { xO ++ $opts ++ zf }			# ++ means concatenate
+  command extract { x ++ $opts ++ zf -C $outdir }	# -C works on Sun too
+  command list { t ++ $opts ++ zf }
+  command create { c ++ $opts ++ zf }			# tar can append (-r), but not tar+gz
+  command common { $archive $args }
+  multiarchive true
+  needs_cwd false
+}
+
+format {
+  disabled						# do not use this format at all
+  name		{ tar[+.]gz(ip)? }
+  extension	{ .tgz .tar.gz }
+  option string path_tar "tar"				# this one does NOT assume tar supports -z
+  option string path_gzip "gzip"
+  variable string opts
+  command common { [ $verbosity >= 1 ] [ $opts = "v" ] }
+  command print { $path_gzip -cd $archive | $path_tar xO ++ $opts $args }
+  command extract { $path_gzip -cd $archive | $path_tar x ++ $opts $args }
+  command list { $path_gzip -cd $archive | $path_tar t ++ $opts $args }
+  command create { $path_tar c ++ $opts $args | $path_gzip > $archive }
+  multiarchive true
+  needs_cwd false
+  create_only true					# FIXME: maybe not necessary? (see create/add above)
+}
+
+
+--------
+
+TODO.v2:
+
+better extraction semantics, cleaner code
+
+ * always use change to directory for extraction, never specify dir on cmd command-line?
+   use ../for instead of absolute dir
+   merges extract-to and extract
+
+ * core support for multiple commands per mode (think debian)
+
+ * better control of user arguments to external command (@args)
+ 
+ * better solution than multiarchivecmd - cleaned up
+
+ * more general commands:
+     test
+
+ * more general options
+     compression level
+
+ * stripext only based on format! (e.g. unpack gz then strip .gz, not .tar.gz)
+
+want aunpack -e to be default!
