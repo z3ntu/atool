@@ -1,3 +1,29 @@
+2005-08-08: atool 0.31.0 released.
+  ATTENTION: This release fixes a serious bug which might cause files and
+  directories to be removed in some circumstances when using adiff. I
+  recommend upgrading to the 0.31.0 immediately. If you cannot upgrade, you
+  are safe as long as you do not use the adiff command on untrusted
+  archives.
+  Here are the details: Symbolic links would be followed when temporary
+  directories were removed recursively. Only the adiff command removed
+  directories in this way - the extracted files of the archives it
+  compared. This means that if you ran adiff on an archive containing a
+  symbolic link that pointed to, say, /foo, /foo would be removed
+  recursively! This was due to a missing check for symbolic links. This bug
+  was found by code audition, and has been fixed in this release.
+  Added arepack command (also -r, --repack) (previously incomplete and
+  disabled, also suggested by Meino Christian Cramer).
+  Added support for 7-Zip'ed TAR archives (.tar.7z) (suggested by Meino
+  Christian Cramer).
+  Implemented cat support for 7-Zip archives.
+  Completed list of supported archive types in the manual page (some were
+  missing).
+  Improve --simulate and --explain.
+  Added support for acat on Debian packages (patch from Peter Valdemar
+  Mørch).
+  Added support for extracting control files from Debian packages as well
+  (patch from Peter Valdemar Mørch, thanks).
+
 2005-07-25: atool 0.30.0 released.
   Added support for 7-Zip archives (.7z) using p7zip (suggested by Meino
   Christian Cramer).
@@ -6,6 +32,7 @@
   Joao Lourenco).
   Fixed some typos in the manual page (reported by Stephane Jourdois).
   Added file matches for LHA SFX archives.
+  Updated building of rpm and debian packages.
   Updated documentation.
   Got rid of year ranges in copyright.
 

@@ -39,6 +39,9 @@ atool \- A script for managing file archives of various types
 .br
 .B adiff
 .RI [ OPTION ]... " ARCHIVE " "" ARCHIVE
+.br
+.B arepack
+.RI [ OPTION ]... OLD-ARCHIVE " " NEW-ARCHIVE
 .SH DESCRIPTION
 This manual page document describes the \fBatool\fP commands.
 These commands are used for managing file archives of various
@@ -64,7 +67,15 @@ arguments are specified, filenames to add are read from standard in.
 \fBadiff\fP generates a diff between two archives using
 diff(1).
 .PP
-Unless the \fB\-\-format\fP (\fB\-f\fP) option is provided,
+\fBarepack\fP repacks archives to a different format. It does
+this by first extracting all files of the old archive into a
+temporary directory, then packing all files extracted to
+that directory to the new archive. Use the \-\-each (\-e) option in
+combination with \-\-format (\-F) to repack multiple archives using a
+single invocation of atool. Note that arepack will not remove the old
+archive.
+.PP
+Unless the \fB\-\-format\fP (\fB\-F\fP) option is provided,
 the archive format is determined by the archive file extension. I.e.
 an extension ".tar.gz" or ".tgz" means tar+gzip format. Note that
 the extensions are checked in the order listed in the section
@@ -213,6 +224,12 @@ All commands are supported.
 .RI \fBtar+compress\fP " " ( .tar.Z ", " .tZ )
 All commands are supported.
 .TP
+.RI \fBtar+lzop\fP " " ( .tar.lzo ", " .tzo )
+All commands are supported.
+.TP
+.RI \fBtar+7z\fP " " ( .tar.7z ", " .t7z )
+All commands are supported.
+.TP
 .RI \fBtar\fP " " ( .tar )
 All commands are supported.
 .TP
@@ -265,6 +282,20 @@ Cat, extract, and add commands are supported.
 .TP
 .RI \fBcompress\fP " " ( .Z )
 Cat, extract, and add commands are supported.
+.TP
+.RI \fBlzop\fP " " ( .lzo )
+Cat, extract, and add commands are supported.
+.TP
+.RI \fB7zip\fP " " ( .7z )
+All commands are supported.
+(Note that 7z refuses to write extracted files to standard out
+if standard out is a terminal. Use -p or pipe the output
+of atool/acat to a pager when reading in a terminal.)
+.TP
+.RI \fBcpio\fP " " ( .cpio )
+List, extract and add commands are supported.
+
+
 .SH CONFIGURATION
 Since version 0.8.0, atool can read custom configuration files.
 First, hardcoded defaults in the atool program file are evaluated.
@@ -331,6 +362,12 @@ when possible. This makes atool use the arj command
 Enable this if find supports the -print0 option and cpio supports
 the -0 option. Without it, it is impossible/harder to make cpio
 archives of files with newline characters in their names.
+.TP
+.B extract_deb_control \fR(default: 1)\fR
+Debian .deb package files contain control information in a DEBIAN
+directory, especially the package's "control" file. Enable this if
+you want the control information to be exctracted during extraction in
+addition to the normal files.
 .TP
 .B strip_unknown_ext \fR(default: 1)\fR
 Certain types of files are actually archives, but their extensions
@@ -527,6 +564,11 @@ in dir2 and the third all dir3:
 To show all differences between version 2.4.17 and 2.4.18 of the kernel:
 .br
 	\fBadiff linux-2.4.17.tar.gz linux-2.4.18.tar.gz\fP
+.PP
+To repack all .tar.gz archives in the current directory to .tar.7z (the
+old archive will be kept untouched):
+.br
+	\fBarepack -F.tar.7z -e *.tar.gz\fP
 .PP
 Here's a shell function that will make the aunpack command change into the
 directory where files were extracted:

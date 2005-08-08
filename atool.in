@@ -31,7 +31,7 @@ use locale;
 use strict;
 
 # Subroutine prototypes (needed for perl 5.6)
-sub runcmds($$;@);                #
+sub runcmds($$$;@);               #
 sub getmode();                    #
 sub multiarchivecmd($$$$@);       #
 sub singlearchivecmd($$$$@);      #
@@ -58,6 +58,8 @@ sub quote($);                     #
 sub shell_execute(@);             #
 sub save_outdir($);               #
 sub handle_empty_add(@);          #
+sub issingleformat($);		  #
+sub repack_archive($$$$);	  #
 
 # Configuration options and their built-in defaults
 $::cfg_args_diff            = '-ru';              # arguments to pass to diff program
@@ -108,6 +110,7 @@ $::cfg_use_jar              = 0;                  # use jar or zip for .jar arch
 $::cfg_use_rar_for_unpack   = 0;                  # use rar to unpack rar files?
 $::cfg_use_tar_bzip2_option = 1;                  # does tar support --bzip2?
 $::cfg_use_tar_z_option     = 1;                  # does tar support -z?
+$::cfg_extract_deb_control  = 1;                  # extract DEBIAN control dir from .deb packages?
 
 # Global variables
 $::basename = quote(File::Basename::basename($0));
@@ -168,6 +171,7 @@ Commands:\
   -a, --add               create archive (apack)\
   -c, --cat               extract file to standard out (acat)\
   -d, --diff              generate a diff between two archives (adiff)\
+  -r, --repack            repack archives to a different format (arepack)\
       --help              display this help and exit\
       --version           output version information and exit\
 \
@@ -229,9 +233,11 @@ if ($mode eq 'diff') {
 	my $outfile1 = makeoutdir() || exit 1;
 	my $outfile2 = makeoutdir() || exit 1;
 	$::opt_cmd_extract_to = $outfile1;
-	exit 1 if (!runcmds('extract-to', $ARGV[0]));
+	$::opt_cmd_extract_to_type = 'f';
+	exit 1 if (!runcmds('extract-to', undef, $ARGV[0]));
 	$::opt_cmd_extract_to = $outfile2;
-	exit 1 if (!runcmds('extract-to', $ARGV[1]));
+	$::opt_cmd_extract_to_type = 'f';
+	exit 1 if (!runcmds('extract-to', undef, $ARGV[1]));
 
 	my $match1 = find_comparable_file($outfile1);
 	my $match2 = find_comparable_file($outfile2);
@@ -241,6 +247,7 @@ if ($mode eq 'diff') {
 	my $allok = cmdexec(1, @cmd);
 
 	foreach my $file ($outfile1,$outfile2) {
+		warn 'rm -r ',quote($file),"\n" if $::opt_simulate;
 		if (-e $file && -d $file) {
 		#if (-e $file) {
 			#print "$::basename: remove `$file'? ";
@@ -248,7 +255,8 @@ if ($mode eq 'diff') {
 			#my $line = <STDIN>;
 			#if (defined $line && $line =~ /^y/) {
 				#if (-d $file) {
-					unlink_directory($file);
+					warn 'rm -r ',quote($file),"\n" if $::opt_explain;
+					unlink_directory($file) if !$::opt_simulate;
 				#} else {
 					#unlink $file;
 				#}
@@ -259,22 +267,44 @@ if ($mode eq 'diff') {
 	exit ($allok ? 0 : 1);
 }
 elsif ($mode eq 'repack') {
-	#FIXME: what if --each!
-	die "$::basename: missing archive arguments\n" if (@ARGV < 1);	#OK
-	die "$::basename: missing archive argument\n" if (@ARGV < 2);		#OK
-	die "$::basename: cannot repack to same archive\n"
-		if ($ARGV[0] eq $ARGV[1]
-				|| File::Spec->canonpath($ARGV[0]) eq File::Spec->canonpath($ARGV[1]));
-	die "$::basename: ".quote($ARGV[1]).": destination file exists\n" if -e $ARGV[1];
-
-	my $outdir = makeoutdir() || exit 1;
-	$::opt_cmd_extract_to = $outdir;
-	exit 1 if (!runcmds('extract-to', $ARGV[0]));																		#OK?????
-	my $newarchive = File::Spec->catdir($::up, $ARGV[1]);
-	chdir($outdir) || die "$::basename: ".quote($outdir).": cannot change to - $!\n";			#OK?????
-	exit 1 if (!runcmds('add', $newarchive, $::cur));
-	chdir($::up) || die "$::basename: ".$::up.": cannot change to - $!\n";	#OK?????
-	unlink_directory($outdir);
+  if ($::opt_each) {
+    if (!defined $::opt_format) {
+      die "$::basename: specify a format with -F when using --each in repack mode\n";
+    }
+    my $fmt2 = findformat($::opt_format, 1);
+    for (my $c = 0; $c < @ARGV; $c++) {
+      my $fmt1 = findformat($ARGV[$c], 0);
+      if (issingleformat($fmt1) && !issingleformat($fmt2)) {
+	warn "$::basename: format $fmt1 is cannot be repacked into format $fmt2\n";
+	warn "skipping ", quote($ARGV[$c]), "\n";
+	next;
+      }
+      if ($fmt1 eq $fmt2) {
+	warn "$::basename: will not repack to same archive type\n";
+	warn "skipping ", quote($ARGV[$c]), "\n";
+	next;
+      }
+      my $newname = stripext($ARGV[$c]).formatext($fmt2);
+      if (-e $newname) {
+	warn "$::basename: ".quote($newname).": destination file exists\n";
+	warn "skipping ", quote($ARGV[$c]), "\n";
+	next;
+      }
+      repack_archive($ARGV[$c], $newname, $fmt1, $fmt2);
+    }
+  } else {
+    die "$::basename: missing archive arguments\n" if (@ARGV < 1); #OK
+    die "$::basename: missing archive argument\n" if (@ARGV < 2); #OK
+    die "$::basename: will not repack to same archive file\n"
+	    if ($ARGV[0] eq $ARGV[1] || File::Spec->canonpath($ARGV[0]) eq File::Spec->canonpath($ARGV[1]));
+    die "$::basename: ".quote($ARGV[1]).": destination file exists\n" if -e $ARGV[1];
+    my $fmt1 = findformat($ARGV[0], 0);
+    my $fmt2 = findformat($ARGV[1], 0);
+    die "$::basename: format $fmt1 is cannot be repacked into format $fmt1\n"
+	    if (issingleformat($fmt1) && !issingleformat($fmt2));
+    die "$::basename: will not repack to same archive type\n" if $fmt1 eq $fmt2;
+    repack_archive($ARGV[0], $ARGV[1], $fmt1, $fmt2);
+  }
 }
 elsif ($::opt_each) {
 	my $allok = 1;
@@ -289,35 +319,38 @@ elsif ($::opt_each) {
 		for (my $c = 0; $c < @ARGV; $c++) {
 			my $archive = File::Spec->canonpath($ARGV[$c]) . formatext($format);
 			warn quote($archive).":\n" if $::opt_verbosity > 1;
-			runcmds($mode, $archive, $ARGV[$c]) or $allok = 0;
+			runcmds('add', $format, $archive, $ARGV[$c]) or $allok = 0;
 		}
 	} else {
 		for (my $c = 0; $c < @ARGV; $c++) {
 			warn quote($ARGV[$c]).":\n" if $::opt_verbosity > 1;
-			runcmds($mode, $ARGV[$c]) or $allok = 0;
+			runcmds($mode, undef, $ARGV[$c]) or $allok = 0;
 		}
 	}
 	exit ($allok ? 0 : 1);
 }
 else {
 	die "$::basename: missing archive argument\n" if (@ARGV == 0);	#OK
-	runcmds($mode, shift @ARGV, @ARGV) || exit 1;
+	runcmds($mode, undef, shift @ARGV, @ARGV) || exit 1;
 }
 
-# runcmds(mode, archive, args)
+# runcmds(mode, format, archive, args)
 # Execute an @PACKAGE_NAME@ command. This is where it all happens.
 # If mode is 'extract', returns the directory (or only file)
 # which was extracted.
-sub runcmds($$;@) {
-	my ($mode, $archive, @args) = @_;
+# If forceformat is undef, the format will be detected from 
+# $::opt_format or the filename.
+sub runcmds($$$;@) {
+	my ($mode, $format, $archive, @args) = @_;
 
-	my $format;
-	if (defined $::opt_format) {
-		$format = findformat($::opt_format, 1);
-	} else {
-		$format = findformat($archive, 0);
+	if (!defined $format) {
+		if (defined $::opt_format) {
+			$format = findformat($::opt_format, 1);
+		} else {
+			$format = findformat($archive, 0);
+		}
+		return undef if !defined $format;
 	}
-	return undef if !defined $format;
 
 	my @cmd;
 	my $outdir;
@@ -367,10 +400,17 @@ sub runcmds($$;@) {
 	}
 	elsif ($format eq 'tar+lzop') {
 		return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
-		push @cmd, $::cfg_path_lzop, '-Ucd', $archive, ['|']	if $mode ne 'add';
+		push @cmd, $::cfg_path_lzop, '-Ucd', $archive, ['|'] if $mode ne 'add';
 		push @cmd, maketarcmd(undef, $outdir, $mode, ''), @args;
 		push @cmd, ['|'], $::cfg_path_lzop, ['>'], $archive if $mode eq 'add';
 		@cmd = handle_empty_add(@cmd) if ($mode eq 'add' && @args == 0);
+		return multiarchivecmd($archive, $outdir, $mode, 1, 0, \@args, @cmd);
+	}
+	elsif ($format eq 'tar+7z') {
+		return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
+		push @cmd, $::cfg_path_7z, 'x', '-so', $archive, ['|']	if $mode ne 'add';
+		push @cmd, maketarcmd(undef, $outdir, $mode, ''), @args;
+		push @cmd, ['|'], $::cfg_path_7z, 'a', '-si', $archive if $mode eq 'add';
 		return multiarchivecmd($archive, $outdir, $mode, 1, 0, \@args, @cmd);
 	}
 	elsif ($format eq 'tar') {
@@ -439,13 +479,14 @@ sub runcmds($$;@) {
 	  # write data to terminal even if the file is designed to be
 	  # read in a terminal...
 	  return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
-	  if ($mode eq 'cat') {
-	    warn "$::basename: ".quote($archive).": $mode command not supported for $format archives\n";
-	    return undef;
-	  }
+	  #if ($mode eq 'cat') {
+	  #  warn "$::basename: ".quote($archive).": $mode command not supported for $format archives\n";
+	  #  return undef;
+	  #}
 	  push @cmd, $::cfg_path_7z;
 	  push @cmd, 'a' if $mode eq 'add';
 	  push @cmd, 'l' if $mode eq 'list';
+	  push @cmd, 'x', '-so' if $mode eq 'cat';
 	  push @cmd, 'x', '-o'.$outdir if $mode eq 'extract';
 	  push @cmd, 'x', '-o'.$::opt_cmd_extract_to if $mode eq 'extract-to';
 	  push @cmd, $archive, @args;
@@ -566,27 +607,37 @@ sub runcmds($$;@) {
 		}
 		else { # add and cat
 			# FIXME: I guess cat could work too, but it would require that we
-  		# extracted to a temporary dir, read and printed it, then removed it.
+  			# extracted to a temporary dir, read and printed it, then removed it.
 			warn "$::basename: ".quote($archive).": $mode command not supported for $format archives\n";
 			return undef;
 		}
 	}
 	elsif ($format eq 'deb') {
 		return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
-		if ($mode eq 'list' || $mode eq 'extract' || $mode eq 'extract-to') {
+		if ($mode eq 'cat') {
+			push @cmd, $::cfg_path_dpkg_deb, '--fsys-tarfile', makeabsolute($archive), ['|'];
+			push @cmd, $::cfg_path_tar, '-xO', @args;
+		} elsif ($mode eq 'list' || $mode eq 'extract' || $mode eq 'extract-to') {
 			push @cmd, $::cfg_path_dpkg_deb;
-			push @cmd, '-c' if $mode eq 'list';
-			push @cmd, '-x' if $mode eq 'extract' || $mode eq 'extract-to';
+			push @cmd, '--contents' if $mode eq 'list';
+			if ($mode eq 'extract' || $mode eq 'extract-to') {
+				push @cmd, '--extract' if $::opt_verbosity <= 0;
+				push @cmd, '--vextract' if $::opt_verbosity > 0;
+			}
 			push @cmd, $archive;
 			push @cmd, $outdir if $mode eq 'extract';
 			push @cmd, $::opt_cmd_extract_to if $mode eq 'extract-to';
 			push @cmd, @args;
-			return multiarchivecmd($archive, $outdir, $mode, 0, 0, \@args, @cmd);
+			if ($::cfg_extract_deb_control && ($mode eq 'extract' || $mode eq 'extract-to')) {
+				push @cmd, [';'];
+				push @cmd, $::cfg_path_dpkg_deb;
+				push @cmd, '--control';
+				push @cmd, $archive;
+				push @cmd, File::Spec->catdir($outdir, 'DEBIAN') if $mode eq 'extract';
+				push @cmd, File::Spec->catdir($::opt_cmd_extract_to, 'DEBIAN') if $mode eq 'extract-to';
+			}
 		}
-		# FIXME: I guess cat could work too, but it would require that we
-		# extracted to a temporary dir, read and printed it, then removed it.
-		warn "$::basename: ".quote($archive).": $mode command not supported for $format archives\n";
-		return undef;
+		return multiarchivecmd($archive, $outdir, $mode, 0, 0, \@args, @cmd);
 	}
 	elsif ($format eq 'ar') {
 		return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
@@ -715,25 +766,27 @@ sub singlearchivecmd($$$$@) {
 
 	if ($mode eq 'list') {
 		warn "$::basename: ".quote($archive).": $mode command not supported for $format archives\n";
-		return;
+		return undef;
 	}
 	elsif ($mode eq 'cat') {
 		push @cmd, '-c', '-d', $archive, @args;
+		$outfile = $archive; # Just so that we don't return undef
 	}
 	elsif ($mode eq 'add') {
 		if (@args > 1) {
 			warn "$::basename: cannot add more than one file with this format\n";
-			return;
+			return undef;
 		}
 		if (!$::opt_force && (-e $archive || -l $archive)) {
 			warn "$::basename: ".quote($archive).": refusing to overwrite existing file\n";
-			return;
+			return undef;
 		}
 		#if (!$::cfg_keep_compressed && stripext($archive) ne $args[0]) {
 		#	warn "$::basename: ".quote($archive).": cannot create a $format archive with this name (use -X)\n";
 		#	return;
 		#}
 		push @cmd, '-c', @args, ['>'], $archive;
+		$outfile = $archive; # Just so that we don't return undef
 	}
 	elsif ($mode eq 'extract') {
 		$outfile = stripext($archive);
@@ -748,7 +801,7 @@ sub singlearchivecmd($$$$@) {
 	}
 	elsif ($mode eq 'extract-to') {
 		$outfile = $::opt_cmd_extract_to;
-		if (-d $outfile) {
+		if ($::opt_simulate ? $::opt_cmd_extract_to_type eq 'd' : -d $outfile) {
 			my $base = File::Basename::basename($archive);
 			$outfile = File::Spec->catfile($outfile, stripext($base));
 		}
@@ -756,7 +809,7 @@ sub singlearchivecmd($$$$@) {
 	}
 
 	push @cmd, ['|'], get_pager_program() if $::opt_use_pager;
-	cmdexec(0, @cmd) || return;
+	cmdexec(0, @cmd) || return undef;
 
 	if ($mode eq 'extract' || $mode eq 'extract-to') {
 		if ($::cfg_show_extracted && !$::opt_simulate) {
@@ -870,6 +923,7 @@ sub makeoutdir() {
 		$dir = sprintf $::cfg_tmpdir_name, int rand 10000;
 	} while (-e $dir);
 
+	warn 'mkdir ', $dir, "\n" if $::opt_simulate || $::opt_explain;
 	if (!$::opt_simulate) {
 		if (!mkdir($dir, 0700)) {
 			warn "$::basename: ".quote($dir).": cannot create directory - $!\n";
@@ -904,7 +958,7 @@ sub shquotemeta($) {
 	return $str;
 }
 
-# multiarchivecmd(archive, outdir, mode, create, argref, cmdspec)
+# multiarchivecmd(archive, outdir, mode, create, needcwd, argref, cmdspec)
 # Execute a command for multi-file archives.
 # The `create' argument controls whether the archive
 # will be created (1) or just added to (0) if mode is "add".
@@ -927,41 +981,56 @@ sub multiarchivecmd($$$$@) {
 	push @cmd, ['|'], get_pager_program() if $::opt_use_pager;
 
 	my $olddir = undef;
-	if ($needcwd && !$::opt_simulate) {
-		$olddir = getcwd();
-		if ($mode eq 'extract' && !chdir($outdir)) {
-			warn "$::basename: ".quote($outdir).": cannot change to - $!\n";
-			return undef;
-		}
-		if ($mode eq 'extract-to' && !chdir($::opt_cmd_extract_to)) {
-			warn "$::basename: ".quote($::opt_cmd_extract_to).": cannot change to - $!\n";
-			return undef;
-		}
+	if ($needcwd) {
+	  $olddir = getcwd();
+	  if ($mode eq 'extract') {
+	    warn "cd ", quote($outdir), "\n" if $::opt_explain || $::opt_simulate;
+	    if (!$::opt_simulate && !chdir($outdir)) {
+	      warn "$::basename: ".quote($outdir).": cannot change to - $!\n";
+	      return undef;
+	    }
+	  }
+	  if ($mode eq 'extract-to') {
+	    warn "cd ", quote($::opt_cmd_extract_to), "\n" if $::opt_explain || $::opt_simulate;
+	    if (!$::opt_simulate && !chdir($::opt_cmd_extract_to)) {
+	      warn "$::basename: ".quote($::opt_cmd_extract_to).": cannot change to - $!\n";
+	      return undef;
+	    }
+	  }
 	}
 
 	if ($mode ne 'extract') {
-		cmdexec(0, @cmd) || return undef;
-		if (defined $olddir && !chdir($olddir)) {
-			warn "$::basename: ".quote($olddir).": cannot change to - $!\n";
-			return undef;
-		}
-		# XXX: can't save outdir with extract-to.
-		return 1;
+	  cmdexec(0, @cmd) || return undef;
+	  if (defined $olddir) {
+	    warn "cd ", quote($olddir), "\n" if $::opt_explain || $::opt_simulate;
+	    if (!$::opt_simulate && !chdir($olddir)) {
+	      warn "$::basename: ".quote($olddir).": cannot change to - $!\n";
+	      return undef;
+	    }
+	  }
+	  # XXX: can't save outdir with extract-to.
+	  return 1;
 	}
 
 	if (!cmdexec(0, @cmd)) {
-		if (defined $olddir && !chdir($olddir)) {
-			warn "$::basename: ".quote($olddir).": cannot change to - $!\n";
-		}
-	 	return undef;
+	  if (defined $olddir) {
+	    warn "cd ", quote($olddir), "\n" if $::opt_explain || $::opt_simulate;
+	    if (!$::opt_simulate && !chdir($olddir)) {
+	      warn "$::basename: ".quote($olddir).": cannot change to - $!\n";
+	    }
+	  }
+	  return undef;
+	}
+
+	if (defined $olddir) {
+	  warn "cd ", quote($olddir), "\n" if $::opt_explain || $::opt_simulate;
+	  if (!$::opt_simulate && !chdir($olddir)) {
+	    warn "$::basename: ".quote($olddir).": cannot change to - $!\n";
+	    return undef;
+	  }
 	}
 
 	return undef if $::opt_simulate;
-
-	if (defined $olddir && !chdir($olddir)) {
-		warn "$::basename: ".quote($olddir).": cannot change to - $!\n";
-		return undef;
-	}
 
 	if (!opendir(DIR, $outdir)) {
 		warn "$::basename: ".quote($outdir).": cannot list - $!\n";
@@ -1043,61 +1112,78 @@ sub multiarchivecmd($$$$@) {
 # stripext(file)
 # Strip extension from the specified file.
 sub stripext($) {
-	my ($file) = @_;
-	return $file if ($file =~ s/(\.tar\.bz2|\.tbz2)$//);
-	return $file if ($file =~ s/(\.tar\.bz|\.tbz)$//);
-	return $file if ($file =~ s/(\.tar\.gz|\.tgz)$//);
-	return $file if ($file =~ s/(\.tar\.Z|\.tZ)$//);
-	return $file if ($file =~ s/\.tar$//);
-	return $file if ($file =~ s/\.bz2$//);
-	return $file if ($file =~ s/\.bz$//);
-	return $file if ($file =~ s/\.gz$//);
-	return $file if ($file =~ s/\.zip$//);
-	return $file if ($file =~ s/\.7z$//);
-	return $file if ($file =~ s/\.alz$//);
-	return $file if ($file =~ s/\.jar$//);
-	return $file if ($file =~ s/\.war$//);
-	return $file if ($file =~ s/\.Z$//);
-	return $file if ($file =~ s/\.rar$//);
-	return $file if ($file =~ s/\.(lha|lzh)$//);
-	return $file if ($file =~ s/\.ace$//);
-	return $file if ($file =~ s/\.arj$//);
-	return $file if ($file =~ s/\.a$//);
-	return $file if ($file =~ s/\.rpm$//);
-	return $file if ($file =~ s/\.deb$//);
-	return $file if ($file =~ s/\.cpio$//);
-	return $file if ($::cfg_strip_unknown_ext && $file =~ s/\.[^.]+$//);
-	return $file;
+  my ($file) = @_;
+  return $file if ($file =~ s/(\.tar\.bz2|\.tbz2)$//);
+  return $file if ($file =~ s/(\.tar\.bz|\.tbz)$//);
+  return $file if ($file =~ s/(\.tar\.gz|\.tgz)$//);
+  return $file if ($file =~ s/(\.tar\.Z|\.tZ)$//);
+  return $file if ($file =~ s/(\.tar\.7z|\.t7z)$//);
+  return $file if ($file =~ s/\.tar$//);
+  return $file if ($file =~ s/\.bz2$//);
+  return $file if ($file =~ s/\.bz$//);
+  return $file if ($file =~ s/\.gz$//);
+  return $file if ($file =~ s/\.zip$//);
+  return $file if ($file =~ s/\.7z$//);
+  return $file if ($file =~ s/\.alz$//);
+  return $file if ($file =~ s/\.jar$//);
+  return $file if ($file =~ s/\.war$//);
+  return $file if ($file =~ s/\.Z$//);
+  return $file if ($file =~ s/\.rar$//);
+  return $file if ($file =~ s/\.(lha|lzh)$//);
+  return $file if ($file =~ s/\.ace$//);
+  return $file if ($file =~ s/\.arj$//);
+  return $file if ($file =~ s/\.a$//);
+  return $file if ($file =~ s/\.rpm$//);
+  return $file if ($file =~ s/\.deb$//);
+  return $file if ($file =~ s/\.cpio$//);
+  return $file if ($::cfg_strip_unknown_ext && $file =~ s/\.[^.]+$//);
+  return $file;
 }
 
 # formatext(format)
 # Return the usual extension for the specified file format
 sub formatext($) {
-	my ($format) = @_;
-	return '.tar.lzo'  if $format eq 'tar+lzop';
-	return '.tar.bz2'  if $format eq 'tar+bzip2';
-	return '.tar.bz'   if $format eq 'tar+bzip';
-	return '.tar.gz'   if $format eq 'tar+gzip';
-	return '.tar.Z'    if $format eq 'tar+compress';
-	return '.tar'      if $format eq 'tar';
-	return '.bz2'      if $format eq 'bzip2';
-	return '.7z'       if $format eq '7z';
-	return '.alz'      if $format eq 'alzip';
-	return '.bz'       if $format eq 'bzip';
-	return '.gz'       if $format eq 'gzip';
-	return '.lzo'      if $format eq 'lzop';
-	return '.zip'      if $format eq 'zip';
-	return '.jar'      if $format eq 'jar';
-	return '.Z'        if $format eq 'compress';
-	return '.rar'      if $format eq 'rar';
-	return '.ace'      if $format eq 'ace';
-	return '.a'        if $format eq 'ar';
-	return '.arj'      if $format eq 'arj';
-	return '.lha'      if $format eq 'lha';
-	return '.rpm'      if $format eq 'rpm';
-	return '.deb'      if $format eq 'deb';
-	return '.cpio'     if $format eq 'cpio';
-	die "$::basename: ".quote($format).": don't know file extension for format\n";
+  my ($format) = @_;
+  return '.tar.bz2'  if $format eq 'tar+bzip2';
+  return '.tar.gz'   if $format eq 'tar+gzip';
+  return '.tar.bz'   if $format eq 'tar+bzip';
+  return '.tar.7z'   if $format eq 'tar+7z';
+  return '.tar.lzo'  if $format eq 'tar+lzop';
+  return '.tar.Z'    if $format eq 'tar+compress';
+  return '.tar'      if $format eq 'tar';
+  return '.bz2'      if $format eq 'bzip2';
+  return '.7z'       if $format eq '7z';
+  return '.alz'      if $format eq 'alzip';
+  return '.bz'       if $format eq 'bzip';
+  return '.gz'       if $format eq 'gzip';
+  return '.lzo'      if $format eq 'lzop';
+  return '.zip'      if $format eq 'zip';
+  return '.jar'      if $format eq 'jar';
+  return '.Z'        if $format eq 'compress';
+  return '.rar'      if $format eq 'rar';
+  return '.ace'      if $format eq 'ace';
+  return '.a'        if $format eq 'ar';
+  return '.arj'      if $format eq 'arj';
+  return '.lha'      if $format eq 'lha';
+  return '.rpm'      if $format eq 'rpm';
+  return '.deb'      if $format eq 'deb';
+  return '.cpio'     if $format eq 'cpio';
+  die "$::basename: ".quote($format).": don't know file extension for format\n";
+}
+
+# issingleformat(fmt)
+# fmt is a file specification as returned by findformat.
+# This function returns true if fmt is a single file archive (gzip etc)
+# for certain. This means that 7zip is not a single file archive format,
+# although it can be used in this way.
+sub issingleformat($) {
+  my ($fmt) = @_;
+  return 1 if $fmt eq 'bzip2';
+  return 1 if $fmt eq 'gzip';
+  return 1 if $fmt eq 'bzip';
+  return 1 if $fmt eq 'compress';
+  return 1 if $fmt eq 'lzop';
+  return 0;
 }
 
 # findformat(spec, manual)
@@ -1143,6 +1229,7 @@ sub findformat($$) {
     ['tar+compress',   qr/(\.tar\.[zZ]|\.t[zZ])$/],
     ['tar+gzip',       qr/(\.tar\.gz|\.tgz)$/],
     ['tar+lzop',       qr/(\.tar\.lzo|\.tzo)$/],
+    ['tar+7z',         qr/(\.tar\.7z|\.t7z)$/],
     ['7z',             qr/\.7z$/],
     ['alzip',          qr/\.alz$/],
     ['arc',            qr/\.arc$/],
@@ -1319,6 +1406,7 @@ sub readconfig($$) {
 		'use_tar_bzip2_option'    => \$::cfg_use_tar_bzip2_option,
 		'use_tar_j_option'        => [ 'use_tar_bzip2_option', \$::cfg_use_tar_bzip2_option ],
 		'use_tar_z_option'        => \$::cfg_use_tar_z_option,
+		'extract_deb_control'     => \$::cfg_extract_deb_control,
 	);
 	return if ($failok && !-e $file);
 	sysopen(FILE, $file, O_RDONLY) || die "$::basename: ".quote($file).": cannot open for reading - $!\n";	#OK
@@ -1358,10 +1446,10 @@ sub unlink_directory($) {
 	closedir(DIR);
 	foreach my $file (@files) {
 		next if $file eq $::cur || $file eq $::up;
-		if (!-d $file) {
-			unlink $file || die "$::basename: ".quote($file).": cannot remove - $!\n";
-		} else {
+		if (-d $file && !-l $file) {
 			unlink_directory($file);
+		} else {
+			unlink $file || die "$::basename: ".quote($file).": cannot remove - $!\n";
 		}
 	}
 	chdir $::up || die "$::basename: $::up: cannot change to - $!\n";
@@ -1436,67 +1524,83 @@ sub quote($) {
 sub shell_execute(@) {
 	my (@cmdspec) = @_;
 
-	my @cmds = ();
-	my $start = 0;
-	my $redir_out = undef;
-	for (my $c = 0; $c < @cmdspec; $c++) {
-		if (ref $cmdspec[$c]) {
-			push @cmds, [ @cmdspec[$start..$c-1] ];
-			$start = $c+1;
-			$redir_out = $cmdspec[$c+1] if (${$cmdspec[$c]}[0] eq '>');
+
+	while (@cmdspec > 0) {
+		my @cmds = ();
+		my $start = 0;
+		my $redir_out = undef;
+		my $more_cmds = 0;
+		my $c;
+		for ($c = 0; $c < @cmdspec; $c++) {
+			if (ref $cmdspec[$c]) {
+				push @cmds, [ @cmdspec[$start..$c-1] ];
+				if (${$cmdspec[$c]}[0] eq '>') {
+					$redir_out = $cmdspec[$c+1];
+					$start = $c+2;
+					$c++;
+				} elsif (${$cmdspec[$c]}[0] eq ';') {
+					$more_cmds = 1;
+					$start = $c+1;
+					$c++;
+					last;
+				} elsif (${$cmdspec[$c]}[0] eq '|') {
+					$start = $c+1;
+				}
+			}
 		}
-	}
-	push @cmds, [ @cmdspec[$start..$#cmdspec] ] if !defined $redir_out;
+		push @cmds, [ @cmdspec[$start..$c-1] ] if $start < $c;
+		splice @cmdspec,0,$c;
 
-	$SIG{INT} = 'IGNORE';
+		$SIG{INT} = 'IGNORE';
 
-	my @ip = ();
-	my @op = ();
-	my @children = ();
-	for (my $c = 0; $c <= $#cmds; $c++) {
-		if ($c != $#cmds) {
-			@op = reverse POSIX::pipe();
-			if (!@op || !defined $op[0] || !defined $op[1]) {
-				$::errmsg = "pipe failed - $!";
+		my @ip = ();
+		my @op = ();
+		my @children = ();
+		for (my $c = 0; $c <= $#cmds; $c++) {
+			if ($c != $#cmds) {
+				@op = reverse POSIX::pipe();
+				if (!@op || !defined $op[0] || !defined $op[1]) {
+					$::errmsg = "pipe failed - $!";
+					return 0;
+				}
+			}
+			if ($c == $#cmds && defined $redir_out) {
+				@_ = (); # XXX: necessary to overcome POSIX autoload bug!
+				@op = (POSIX::open($redir_out, &POSIX::O_WRONLY | &POSIX::O_CREAT));
+				if (!@op || !defined $op[0]) {
+					$::errmsg = quote($redir_out).": cannot open for writing - $!";
+					return 0;
+				}
+			}
+			my $pid = fork();
+			die "fork failed - $!\n" if !defined $pid;
+			if ($pid == 0) {
+				$SIG{INT} = '';
+				if (@ip) {
+					die "dup2 failed - $!\n" if POSIX::dup2($ip[1], 0) < 0;
+					POSIX::close($_) foreach (@ip);
+				}
+				if (@op) {
+					die "dup2 failed - $!\n" if POSIX::dup2($op[0], 1) < 0;
+					POSIX::close($_) foreach (@op);
+				}
+				exec(@{$cmds[$c]}) || die ${$cmds[$c]}[0].": cannot execute - $!\n";
+			}
+			POSIX::close($op[0]) if ($c == $#cmds && defined $redir_out);
+			POSIX::close($_) foreach (@ip);
+			@ip = @op;
+			@op = ();
+			push @children, $pid;
+		}
+
+		foreach (@children) {
+			if (waitpid($_,0) < 0) {
+				$::errmsg = "waitpid failed - $!";
 				return 0;
 			}
 		}
-		if ($c == $#cmds && defined $redir_out) {
-			@_ = (); # XXX: necessary to overcome POSIX autoload bug!
-			@op = (POSIX::open($redir_out, &POSIX::O_WRONLY | &POSIX::O_CREAT));
-			if (!@op || !defined $op[0]) {
-				$::errmsg = quote($redir_out).": cannot open for writing - $!";
-				return 0;
-			}
-		}
-		my $pid = fork();
-		die "fork failed - $!\n" if !defined $pid;
-		if ($pid == 0) {
-			$SIG{INT} = '';
-			if (@ip) {
-				die "dup2 failed - $!\n" if POSIX::dup2($ip[1], 0) < 0;
-				POSIX::close($_) foreach (@ip);
-			}
-			if (@op) {
-				die "dup2 failed - $!\n" if POSIX::dup2($op[0], 1) < 0;
-				POSIX::close($_) foreach (@op);
-			}
-			exec(@{$cmds[$c]}) || die ${$cmds[$c]}[0].": cannot execute - $!\n";
-		}
-		POSIX::close($op[0]) if ($c == $#cmds && defined $redir_out);
-		POSIX::close($_) foreach (@ip);
-		@ip = @op;
-		@op = ();
-		push @children, $pid;
+		$SIG{INT} = '';
 	}
-
-	foreach (@children) {
-		if (waitpid($_,0) < 0) {
-			$::errmsg = "waitpid failed - $!";
-			return 0;
-		}
-	}
-	$SIG{INT} = '';
 
 	return 1;
 }
@@ -1532,6 +1636,64 @@ sub get_pager_program {
 	return $::cfg_path_pager;
 }
 
+# repack_archive(srcfile,dstfile,srcfmt,dstfmt)
+# Repack an archive from a file to another (that shouldn't exist).
+sub repack_archive($$$$) {
+  my ($file1,$file2,$fmt1,$fmt2) = @_;
+
+  # Special cases for tar-based archives (single file archives).
+  if ($fmt1 =~ /^tar\+/ && $fmt2 =~ /^tar$/) {
+    $fmt1 =~ s/^tar\+//;
+    $::opt_cmd_extract_to = $file2; # XXX: would like to get rid of these
+    $::opt_cmd_extract_to_type = 'f'; # XXX: would like to get rid of these
+    exit 1 if (!runcmds('extract-to', $fmt1, $file1));
+    return;
+  } elsif ($fmt1 =~ /^tar$/ && $fmt2 =~ /^tar\+/) {
+    $fmt2 =~ s/^tar\+//;
+    exit 1 if (!runcmds('add', $fmt2, $file2, $file1));
+    return;
+  }
+
+  if ($fmt1 =~ /^tar\+/ && $fmt2 =~ /^tar\+/) {
+    $fmt1 =~ s/^tar\+//;
+    $fmt2 =~ s/^tar\+//;
+  }
+
+  my $newarchive;
+  if (File::Spec->file_name_is_absolute($file2)) {
+    $newarchive = $file2;
+  } else {
+    $newarchive = File::Spec->catdir($::up, $file2);
+  }
+
+  my $outdir;
+  $outdir = makeoutdir() || exit 1;
+  $::opt_cmd_extract_to = $outdir;
+  $::opt_cmd_extract_to_type = 'd';
+  exit 1 if (!runcmds('extract-to', $fmt1, $file1));
+  warn 'cd ',quote($outdir),"\n" if $::opt_explain || $::opt_simulate;
+  if (!$::opt_simulate) {
+    chdir($outdir) || die "$::basename: ".quote($outdir).": cannot change to - $!\n";
+  }
+  if (issingleformat($fmt2)) {
+    # Preferrably we would like to find out what file it was
+    # extracted to from the above execute-to command.
+    #my $oldfile = stripext_exactly(basename($file1), $fmt1);
+    my $oldfile = find_comparable_file($::cur);	# FIXME: won't work in simulate mode
+    exit 1 if (!runcmds('add', $fmt2, $newarchive, $oldfile));
+  } else {
+    exit 1 if (!runcmds('add', $fmt2, $newarchive, $::cur));
+  }
+  warn 'cd ',quote($::up),"\n" if $::opt_explain || $::opt_simulate;
+  if (!$::opt_simulate) {
+    chdir($::up) || die "$::basename: ".$::up.": cannot change to - $!\n"; #OK?????
+  }
+  warn 'rm -r ',quote($outdir),"\n" if $::opt_explain || $::opt_simulate;
+  if (!$::opt_simulate) {
+    unlink_directory($outdir);
+  }
+}
+
 sub END {
-	map (rmdir, @::rmdirs) if !$::opt_simulate;	# Errors are ignored
+  map (rmdir, @::rmdirs) if !$::opt_simulate;	# Errors are ignored
 }

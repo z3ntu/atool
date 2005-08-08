@@ -69,18 +69,12 @@ maintclean: distclean
 install: all
 	install -d $(DESTDIR)$(bindir)
 	install -m 755 atool $(DESTDIR)$(bindir)
-	ln -s -f atool $(DESTDIR)$(bindir)/aunpack
-	ln -s -f atool $(DESTDIR)$(bindir)/apack
-	ln -s -f atool $(DESTDIR)$(bindir)/acat
-	ln -s -f atool $(DESTDIR)$(bindir)/als
-	ln -s -f atool $(DESTDIR)$(bindir)/adiff
 	install -d $(DESTDIR)$(mandir)/man1
 	install -m 644 atool.1 $(DESTDIR)$(mandir)/man1
-	ln -s -f atool.1 $(DESTDIR)$(mandir)/man1/aunpack.1
-	ln -s -f atool.1 $(DESTDIR)$(mandir)/man1/apack.1
-	ln -s -f atool.1 $(DESTDIR)$(mandir)/man1/acat.1
-	ln -s -f atool.1 $(DESTDIR)$(mandir)/man1/als.1
-	ln -s -f atool.1 $(DESTDIR)$(mandir)/man1/adiff.1
+	for f in aunpack arepack apack acat als adiff; do \
+	  ln -s -f atool $(DESTDIR)$(bindir)/$$f; \
+	  ln -s -f atool.1 $(DESTDIR)$(mandir)/man1/$$f.1; \
+	done
 
 dist:
 	rm -rf $(distdir)

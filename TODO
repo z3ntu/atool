@@ -1,3 +1,9 @@
+add AUTHORS file
+improve messages printed from arepack.
+---
+rewrite atool implement extract_archive  that is sensitive or not
+---
+
 add option to assume format with -F in some situations (like tar.gz)?
 add option to always assume -e? and add some option for the reverse (-s, --single)
 assume -e when passing a single directory as argument?
@@ -22,6 +28,8 @@ arepack to repack archives?
   arepack SOURCE DEST					OK done
   arepack -F DESTFORMAT -e SOURCE1 SOURCE2..		dest format
   arepack -e FORMAT SOURCE DEST				source format? ??
+
+  arepack -F.tar.bz2 foo.tar.gz   would only gunzip then bzip2. tar not involved!
 
 tests:
   does gzip support --?
