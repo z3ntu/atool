@@ -271,6 +271,9 @@ Extract and list commands are supported.
 .RI \fBdeb\fP " " ( .deb )
 Extract and list commands are supported.
 .TP
+.RI \fBcab\fP " " ( .cab )
+Cat, extract, and list commands are supported.
+.TP
 .RI \fBgzip\fP " " ( .gz )
 Cat, extract, and add commands are supported.
 .TP
@@ -429,6 +432,8 @@ of this number by using something else than `%d' - see printf(3).
 .B path_rar \fR(default: rar)\fR
 .TP
 .B path_unrar \fR(default: unrar)\fR
+.TP
+.B path_cabextract \fR(default: cabextract)\fR
 .TP
 .B path_7z \fR(default: 7z)\fR
 .TP

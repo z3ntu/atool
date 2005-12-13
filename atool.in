@@ -72,6 +72,7 @@ $::cfg_path_arc             = 'arc';              # arc program
 $::cfg_path_arj             = 'arj';              # arj program
 $::cfg_path_bzip            = 'bzip';             # bzip program
 $::cfg_path_bzip2           = 'bzip2';            # bzip2 program
+$::cfg_path_cabextract      = 'cabextract';       # cabextract program
 $::cfg_path_cat             = 'cat';              # cat program
 $::cfg_path_compress        = 'compress';         # compress program
 $::cfg_path_cpio            = 'cpio';             # cpio program
@@ -274,7 +275,7 @@ elsif ($mode eq 'repack') {
     my $fmt2 = findformat($::opt_format, 1);
     for (my $c = 0; $c < @ARGV; $c++) {
       my $fmt1 = findformat($ARGV[$c], 0);
-      if (issingleformat($fmt1) && !issingleformat($fmt2)) {
+      if (!issingleformat($fmt1) && issingleformat($fmt2)) {
 	warn "$::basename: format $fmt1 is cannot be repacked into format $fmt2\n";
 	warn "skipping ", quote($ARGV[$c]), "\n";
 	next;
@@ -301,7 +302,7 @@ elsif ($mode eq 'repack') {
     my $fmt1 = findformat($ARGV[0], 0);
     my $fmt2 = findformat($ARGV[1], 0);
     die "$::basename: format $fmt1 is cannot be repacked into format $fmt1\n"
-	    if (issingleformat($fmt1) && !issingleformat($fmt2));
+	    if (!issingleformat($fmt1) && issingleformat($fmt2));
     die "$::basename: will not repack to same archive type\n" if $fmt1 eq $fmt2;
     repack_archive($ARGV[0], $ARGV[1], $fmt1, $fmt2);
   }
@@ -491,6 +492,23 @@ sub runcmds($$$;@) {
 	  push @cmd, 'x', '-o'.$::opt_cmd_extract_to if $mode eq 'extract-to';
 	  push @cmd, $archive, @args;
 	  return multiarchivecmd($archive, $outdir, $mode, 1, 0, \@args, @cmd);
+	}
+	elsif ($format eq 'cab') {
+	  return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
+	  if ($mode eq 'add') {
+	    warn "$::basename: ".quote($archive).": $mode command not supported for $format archives\n";
+	    return undef;
+	  }
+	  push @cmd, $::cfg_path_cabextract;
+	  push @cmd, '--single';
+	  push @cmd, '--directory', $outdir if $mode eq 'extract';
+	  push @cmd, '--directory', $::opt_cmd_extract_to if $mode eq 'extract-to';
+	  push @cmd, '--pipe' if $mode eq 'cat';
+	  push @cmd, '--list' if $mode eq 'list';
+	  push @cmd, $archive;
+	  push @cmd, '--filter';
+	  push @cmd, @args;
+	  return multiarchivecmd($archive, $outdir, $mode, 0, 0, \@args, @cmd);
 	}
 	elsif ($format eq 'alzip') {
 	  if ($mode eq 'cat' || $mode eq 'add' || $mode eq 'list') {
@@ -893,11 +911,11 @@ sub cmdexec($@) {
 # Make a command specification when printing errors.
 sub makespec(@) {
 	my (@cmd) = @_;
-	my $spec = $cmd[0].' ..';
+	my $spec = $cmd[0].' ...';
 	my $lastref = 0;
 	foreach (@cmd, '') {
 		if ($lastref) {
-			$spec .= " | $_ ..";
+			$spec .= " | $_ ...";
 			$lastref = 0;
 		}
 		$lastref = 1 if (ref);
@@ -1136,6 +1154,7 @@ sub stripext($) {
   return $file if ($file =~ s/\.rpm$//);
   return $file if ($file =~ s/\.deb$//);
   return $file if ($file =~ s/\.cpio$//);
+  return $file if ($file =~ s/\.cab$//);
   return $file if ($::cfg_strip_unknown_ext && $file =~ s/\.[^.]+$//);
   return $file;
 }
@@ -1168,6 +1187,7 @@ sub formatext($) {
   return '.rpm'      if $format eq 'rpm';
   return '.deb'      if $format eq 'deb';
   return '.cpio'     if $format eq 'cpio';
+  return '.cab'	     if $format eq 'cab';
   die "$::basename: ".quote($format).": don't know file extension for format\n";
 }
 
@@ -1212,6 +1232,8 @@ sub findformat($$) {
     ['cpio',           qr/^cpio archive$/],
     ['cpio',           qr/^ASCII cpio archive /],
     ['rpm',            qr/^RPM v/],
+    ['cab',            qr/^Microsoft Cabinet archive data\W/],
+    ['cab',            qr/^PE executable for MS Windows /],
     ['deb',            qr/^Debian binary package(\W|$)/],
     ['bzip2',          qr/ \(bzip2 compressed data(\W|$)/],
     ['bzip',           qr/ \(bzip compressed data(\W|$)/],
@@ -1242,6 +1264,7 @@ sub findformat($$) {
     ['gzip',           qr/\.gz$/],
     ['jar',            qr/\.(jar|war)$/],
     ['lha',            qr/\.(lha|lzh)$/],
+    ['cab',            qr/\.cab$/],
     ['lzop',           qr/\.lzo$/],
     ['rar',            qr/\.rar$/],
     ['rpm',            qr/\.rpm$/],
@@ -1340,7 +1363,7 @@ sub backticks(@) {
   close OUT;
   my $text = join('', <IN>);
   close IN;
-  if (waitpid($child,0) != $child) {
+  if (waitpid($child,0) != $child && $^O ne 'MSWin32') {
 		$::errmsg = "waitpid failed - $!";
 		return;
 	}
@@ -1367,6 +1390,7 @@ sub readconfig($$) {
 		'path_arj'                => \$::cfg_path_arj,
 		'path_bzip'               => \$::cfg_path_bzip,
 		'path_bzip2'              => \$::cfg_path_bzip2,
+		'path_cabextract'         => \$::cfg_path_cabextract,
 		'path_cat'                => \$::cfg_path_cat,
 		'path_compress'           => \$::cfg_path_compress,
 		'path_cpio'               => \$::cfg_path_cpio,
@@ -1594,7 +1618,7 @@ sub shell_execute(@) {
 		}
 
 		foreach (@children) {
-			if (waitpid($_,0) < 0) {
+			if (waitpid($_,0) < 0 && $^O ne 'MSWin32') {
 				$::errmsg = "waitpid failed - $!";
 				return 0;
 			}

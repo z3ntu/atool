@@ -1,3 +1,5 @@
+arepack should print how many bytes were saved for each archive, and in total (Meino Christian Cramer).
+
 add AUTHORS file
 improve messages printed from arepack.
 ---

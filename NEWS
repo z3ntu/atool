@@ -1,3 +1,15 @@
+2005-12-13: atool 0.32.0 released.
+  Fixed bug in repack mode: Could not repack a compressed file into an
+  archive, but could (incorrectly) repack an archive to a compressed file
+  (reported by Meino Christian Cramer).
+  Print ellipsis properly in output ("...", not "..") (patch from Ed Avis).
+  Added support for Microsoft Cabinet archives.
+  Ignore waitpid errors on win32 (patch from Ed Avis).
+
+2005-08-08: web page updated.
+  Fixed some typos in the web page and NEWS file (will be updated for next
+  release).
+
 2005-08-08: atool 0.31.0 released.
   ATTENTION: This release fixes a serious bug which might cause files and
   directories to be removed in some circumstances when using adiff. I
@@ -10,7 +22,7 @@
   compared. This means that if you ran adiff on an archive containing a
   symbolic link that pointed to, say, /foo, /foo would be removed
   recursively! This was due to a missing check for symbolic links. This bug
-  was found by code audition, and has been fixed in this release.
+  was found by code auditing, and has been fixed in this release.
   Added arepack command (also -r, --repack) (previously incomplete and
   disabled, also suggested by Meino Christian Cramer).
   Added support for 7-Zip'ed TAR archives (.tar.7z) (suggested by Meino
@@ -23,6 +35,7 @@
   Mørch).
   Added support for extracting control files from Debian packages as well
   (patch from Peter Valdemar Mørch, thanks).
+  Fixed some manual page typos.
 
 2005-07-25: atool 0.30.0 released.
   Added support for 7-Zip archives (.7z) using p7zip (suggested by Meino

@@ -92,4 +92,4 @@ debian:
 	cd $(srcdir) && dpkg-buildpackage -rfakeroot -us -uc -sd -b
 
 rpm: atool.spec
-	rpm -bb --clean atool.spec
+	rpmbuild -bb --clean atool.spec
