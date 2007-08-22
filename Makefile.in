@@ -1,6 +1,6 @@
 # Makefile.in - Makefile for atool
 #
-# Copyright (C) 2001, 2002, 2003, 2004, 2005 Oskar Liljeblad
+# Copyright (C) 2001, 2002, 2003, 2004, 2005, 2007 Oskar Liljeblad
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ exec_prefix = @exec_prefix@
 bindir = @bindir@
 
 # Path where the atool manpages are installed
-mandir = @mandir@
+mandir = @datarootdir@/man
 
 # Directory in archive created by `make dist'
 distdir = @PACKAGE_TARNAME@-@PACKAGE_VERSION@
@@ -53,7 +53,7 @@ config.status: $(srcdir)/configure
 
 clean:
 	rm -f $(srcdir)/debian/atool.{postinst.debhelper,prerm.debhelper}
-	rm -f $(srcdir)/debian/{atool.substvars,files,substvars,build-stamp}
+	rm -f $(srcdir)/debian/{atool.substvars,files,substvars,build-stamp,stamp-*}
 	rm -rf $(srcdir)/debian/atool
 
 distclean: clean

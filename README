@@ -64,9 +64,9 @@ The following programs are required to run atool:
    atool is written in Perl. The modules File::Spec, File::Basename,
    Getopt::Long and POSIX must be available (they probably are by default).
 
-   site:</i http://www.perl.org/
+   site: http://www.perl.org/
 
-   package:<c perl
+   package: perl
 
 The following programs are optional for running atool:
 
@@ -76,9 +76,9 @@ The following programs are optional for running atool:
    default. This program is necessary unless you choose to disable the
    use_file option.
 
-   site</i: ftp://ftp.astron.com/pub/file/
+   site: ftp://ftp.astron.com/pub/file/
 
-   package<c file
+   package: file
 
  * tar (GNU tar)
 
@@ -87,17 +87,17 @@ The following programs are optional for running atool:
    the Installation section below if you don't use GNU tar 1.13.18 or
    later.
 
-   site:</i http://www.gnu.org/software/tar/tar.html
+   site: http://www.gnu.org/software/tar/tar.html
 
-   package:<c tar
+   package: tar
 
  * gzip (GNU zip)
 
    gzip is required if you want to use atool with gzip compressed archives.
 
-   site:</i http://www.gzip.org/
+   site: http://www.gzip.org/
 
-   package:<c gzip
+   package: gzip
 
  * bzip
 
@@ -109,24 +109,24 @@ The following programs are optional for running atool:
    bzip2 is required if you want to use atool with bzip2 compressed
    archives.
 
-   site:</i http://www.bzip.org/
+   site: http://www.bzip.org/
 
-   package:<c bzip2
+   package: bzip2
 
  * lzop
 
    lzop is required if you want to use atool with lzop compressed archives.
 
-   site:</i http://www.lzop.org/
+   site: http://www.lzop.org/
 
-   package:<c lzop
+   package: lzop
 
  * zip/unzip (Info-ZIP Zip/Unzip)
 
    Zip is required if you want to use atool with zip archives.
    Implementations other than Info-ZIP's might work with atool as well.
 
-   site:</i http://www.info-zip.org
+   site: http://www.info-zip.org
 
    packages:zip, <c unzip
 
@@ -136,86 +136,86 @@ The following programs are optional for running atool:
    Implementations other than Eugene Roshal's might work with atool as
    well.
 
-   site:</i http://www.rarsoft.com/
+   site: http://www.rarsoft.com/
 
-   package:rar, <c unrar
+   package: rar, unrar
 
  * lha (LHa for UNIX)
 
    LHa is required if you want to use atool with lha, lharc and similar
    archives.
 
-   site:</i http://www.infor.kanazawa-it.ac.jp/~ishii/lhaunix/
+   site: http://www.infor.kanazawa-it.ac.jp/~ishii/lhaunix/
 
-   package:<c lha
+   package: lha
 
  * unace (UnAce for Linux)
 
    UnAce is required if you want to use atool with ace archives.
 
-   site:</i http://www.winace.com
+   site: http://www.winace.com
 
-   package:<c unace
+   package: unace
 
  * arj
 
    Arj is required if you want to use atool with arj archives.
 
-   site:</i http://arj.sourceforge.net
+   site: http://arj.sourceforge.net
 
-   package:<c arj
+   package: arj
 
  * Red Hat Package Manager
 
    The Red Hat Package Manager is required if you want to use atool with
    rpm archives.
 
-   site:</i http://www.rpm.org/
+   site: http://www.rpm.org/
 
-   package:<c rpm
+   package: rpm
 
  * cpio (GNU cpio)
 
    cpio is required if you want to use atool with cpio archives. Other
    implmentations than GNU's might work as well.
 
-   site:</i http://www.gnu.org/software/cpio/
+   site: http://www.gnu.org/software/cpio/
 
-   package:<c cpio
+   package: cpio
 
  * arc
 
    arc is required if you want to use atool with ARC archives (all commands
    supported).
 
-   site:</i http://sources.isc.org/archiver/arc-5.21.txt
+   site: http://sources.isc.org/archiver/arc-5.21.txt
 
-   package:<c arc
+   package: arc
 
  * nomarch
 
    nomarch is required if you want to use atool to list and extract files
    from ARC archives.
 
-   site:</i http://rus.members.beeb.net/nomarch.html
+   site: http://rus.members.beeb.net/nomarch.html
 
-   package:<c nomarch
+   package: nomarch
 
  * p7zip
 
    p7zip is required if you want to use atool with 7z archives.
 
-   site:</i http://p7zip.sourceforge.net/
+   site: http://p7zip.sourceforge.net/
 
-   package:<c p7zip
+   package: p7zip
 
  * unalz
 
    unalz is required if you want to use atool with alzip archives.
 
-   site:</i http://www.kipple.pe.kr/win/unalz/
+   site: http://www.kipple.pe.kr/win/unalz/
 
-package:<c unalz
+   package: unalz
 
 Building
 ========

@@ -1,6 +1,8 @@
-arepack should print how many bytes were saved for each archive, and in total (Meino Christian Cramer).
+from Thomas Link: force atool to identify files using file
 
-add AUTHORS file
+---
+arepack should print how many bytes were saved for each archive, and in total (Meino Christian Cramer).
+fix FIXMEs in AUTHORS file
 improve messages printed from arepack.
 ---
 rewrite atool implement extract_archive  that is sensitive or not

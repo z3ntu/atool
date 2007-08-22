@@ -1,3 +1,11 @@
+2007-08-22: atool 0.33.0 released.
+  Change order of arguments in tar commands.
+  Use 'f' option to tar when using archive from stdin/to stdout (by
+  reported by Shotaro Aoyama).
+  Fix configuration file bug: "use_arj_for_unpack" did not work 
+  (reported by Simon Peter).
+  Minor build and documentation updates.
+
 2005-12-13: atool 0.32.0 released.
   Fixed bug in repack mode: Could not repack a compressed file into an
   archive, but could (incorrectly) repack an archive to a compressed file

@@ -2,7 +2,7 @@
 #
 # atool - A script for managing file archives of various types.
 #
-# Copyright (C) 2001, 2002, 2003, 2004, 2005 Oskar Liljeblad
+# Copyright (C) 2001, 2002, 2003, 2004, 2005, 2007 Oskar Liljeblad
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -361,7 +361,7 @@ sub runcmds($$$;@) {
 			push @cmd, maketarcmd($archive, $outdir, $mode, 'f', '--bzip2'), @args;
 		} else {
 			push @cmd, $::cfg_path_bzip2, '-cd', $archive, ['|'] if $mode ne 'add';
-			push @cmd, maketarcmd(undef, $outdir, $mode, ''), @args;
+			push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
 			push @cmd, ['|'], $::cfg_path_bzip2, ['>'], $archive if $mode eq 'add';
 		}
 		@cmd = handle_empty_add(@cmd) if ($mode eq 'add' && @args == 0);
@@ -373,7 +373,7 @@ sub runcmds($$$;@) {
 			push @cmd, maketarcmd($archive, $outdir, $mode, 'zf'), @args;
 		} else {
 			push @cmd, $::cfg_path_gzip, '-cd', $archive, ['|'] if $mode ne 'add';
-			push @cmd, maketarcmd(undef, $outdir, $mode, ''), @args;
+			push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
 			push @cmd, ['|'], $::cfg_path_gzip, ['>'], $archive if $mode eq 'add';
 		}
 		@cmd = handle_empty_add(@cmd) if ($mode eq 'add' && @args == 0);
@@ -382,7 +382,7 @@ sub runcmds($$$;@) {
 	elsif ($format eq 'tar+bzip') {
 		return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
 		push @cmd, $::cfg_path_bzip, '-cd', $archive, ['|']	if $mode ne 'add';
-		push @cmd, maketarcmd(undef, $outdir, $mode, ''), @args;
+		push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
 		push @cmd, ['|'], $::cfg_path_bzip, ['>'], $archive if $mode eq 'add';
 		@cmd = handle_empty_add(@cmd) if ($mode eq 'add' && @args == 0);
 		return multiarchivecmd($archive, $outdir, $mode, 1, 0, \@args, @cmd);
@@ -394,7 +394,7 @@ sub runcmds($$$;@) {
 		} else {
 			push @cmd, $::cfg_path_compress, '-cd', $archive, ['|']	if $mode ne 'add';
 		}
-		push @cmd, maketarcmd(undef, $outdir, $mode, ''), @args;
+		push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
 		push @cmd, ['|'], $::cfg_path_compress, ['>'], $archive if $mode eq 'add';
 		@cmd = handle_empty_add(@cmd) if ($mode eq 'add' && @args == 0);
 		return multiarchivecmd($archive, $outdir, $mode, 1, 0, \@args, @cmd);
@@ -402,7 +402,7 @@ sub runcmds($$$;@) {
 	elsif ($format eq 'tar+lzop') {
 		return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
 		push @cmd, $::cfg_path_lzop, '-Ucd', $archive, ['|'] if $mode ne 'add';
-		push @cmd, maketarcmd(undef, $outdir, $mode, ''), @args;
+		push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
 		push @cmd, ['|'], $::cfg_path_lzop, ['>'], $archive if $mode eq 'add';
 		@cmd = handle_empty_add(@cmd) if ($mode eq 'add' && @args == 0);
 		return multiarchivecmd($archive, $outdir, $mode, 1, 0, \@args, @cmd);
@@ -410,7 +410,7 @@ sub runcmds($$$;@) {
 	elsif ($format eq 'tar+7z') {
 		return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
 		push @cmd, $::cfg_path_7z, 'x', '-so', $archive, ['|']	if $mode ne 'add';
-		push @cmd, maketarcmd(undef, $outdir, $mode, ''), @args;
+		push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
 		push @cmd, ['|'], $::cfg_path_7z, 'a', '-si', $archive if $mode eq 'add';
 		return multiarchivecmd($archive, $outdir, $mode, 1, 0, \@args, @cmd);
 	}
@@ -860,7 +860,7 @@ sub singlearchivecmd($$$$@) {
 # The parameter opts specifies additional arguments to add.
 sub maketarcmd($$$$@) {
 	my ($archive, $outdir, $mode, $opts, @rest) = @_;
-	$opts .= 'v' if $::opt_verbosity >= 1;
+	$opts = 'v'.$opts if $::opt_verbosity >= 1;
 	my @cmd = ($::cfg_path_tar);
 	push @cmd, "xO$opts" if $mode eq 'cat';
 	push @cmd, "x$opts" if ($mode eq 'extract' || $mode eq 'extract-to');
@@ -1420,7 +1420,7 @@ sub readconfig($$) {
 		'strip_unknown_ext'       => \$::cfg_strip_unknown_ext,
 		'tmpdir_name'             => \$::cfg_tmpdir_name,
 		'use_arc_for_unpack'      => \$::cfg_use_arc_for_unpack,
-		'use_arj_for_unpack'      => \$::cfg_use_arc_for_unpack,
+		'use_arj_for_unpack'      => \$::cfg_use_arj_for_unpack,
 		'use_file'                => \$::cfg_use_file,
 		'use_find_cpio_print0'    => \$::cfg_use_find_cpio_print0,
 		'use_gzip_for_z'          => \$::cfg_use_gzip_for_z,
