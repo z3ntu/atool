@@ -1,0 +1,16 @@
+Authors
+=======
+
+Oskar Liljeblad <oskar@osk.mine.nu>
+
+
+Contributors
+============
+
+Peter Valdemar Mørch
+ - patches for handling Debian archives
+
+Nick Matteo
+ - patch for lzma support
+
+FIXME: figure out list of people here

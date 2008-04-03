@@ -8,7 +8,7 @@ Standards-Version: 3.6.1.1
 Package: atool
 Architecture: all
 Depends: ${perl:Depends}
-Suggests: unzip, bzip, bzip2, fastjar, lzop
+Suggests: unzip, bzip, bzip2, fastjar, lzop, lzma
 Description: A script for managing file archives of various types
  atool is a script for managing file archives of various types (tar,
  tar+gzip, zip etc).

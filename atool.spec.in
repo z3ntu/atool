@@ -49,4 +49,4 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
 %doc README ChangeLog COPYING NEWS TODO
 %{_prefix}/bin/*
-%{_prefix}/man/man1/*
+%{_prefix}/share/man/man1/*

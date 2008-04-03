@@ -121,6 +121,12 @@ The following programs are optional for running atool:
 
    package: lzop
 
+ * LZMA
+
+   LZMA is required if you want to use atool with lzma compressed archives.
+
+   site: http://www.7-zip.org/sdk.html
+
  * zip/unzip (Info-ZIP Zip/Unzip)
 
    Zip is required if you want to use atool with zip archives.

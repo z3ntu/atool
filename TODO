@@ -1,3 +1,6 @@
+if making RPM, then upload SRPM as well
+
+add support for lrzip: http://ck.kolivas.org/apps/lrzip/
 from Thomas Link: force atool to identify files using file
 
 ---

@@ -1,8 +1,8 @@
-#! @PERL@ -w
+#!/usr/bin/perl -w
 #
 # atool - A script for managing file archives of various types.
 #
-# Copyright (C) 2001, 2002, 2003, 2004, 2005, 2007 Oskar Liljeblad
+# Copyright (C) 2001, 2002, 2003, 2004, 2005, 2007, 2008 Oskar Liljeblad
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -61,6 +61,12 @@ sub handle_empty_add(@);          #
 sub issingleformat($);		  #
 sub repack_archive($$$$);	  #
 
+$::SYSCONFDIR = '/etc'; # This line is automatically updated by make
+$::PACKAGE = 'atool'; # This line is automatically updated by make
+$::VERSION = '0.34.0'; # This line is automatically updated by make
+$::BUG_EMAIL = 'oskar@osk.mine.nu'; # This line is automatically updated by make
+$::PROGRAM = $::PACKAGE;
+
 # Configuration options and their built-in defaults
 $::cfg_args_diff            = '-ru';              # arguments to pass to diff program
 $::cfg_default_verbosity    = 1;                  # default verbosity level
@@ -82,6 +88,7 @@ $::cfg_path_find            = 'find';             # find program
 $::cfg_path_gzip            = 'gzip';             # gzip program
 $::cfg_path_jar             = 'jar';              # jar program
 $::cfg_path_lha             = 'lha';              # lha program
+$::cfg_path_lzma            = 'lzma';             # lzma program
 $::cfg_path_lzop            = 'lzop';             # lzop program
 $::cfg_path_nomarch         = 'nomarch';          # nomarch program
 $::cfg_path_pager           = 'pager';            # pager program
@@ -97,8 +104,8 @@ $::cfg_path_unrar           = 'unrar';            # unrar program
 $::cfg_path_unzip           = 'unzip';            # unzip program
 $::cfg_path_xargs           = 'xargs';            # xargs program
 $::cfg_path_zip             = 'zip';              # zip program
-$::cfg_path_usercfg         = '.@PACKAGE_NAME@rc';         # user configuration file
-$::cfg_path_syscfg          = '/etc/@PACKAGE_NAME@.conf';  # system-wide configuration file
+$::cfg_path_usercfg         = '.'.$::PROGRAM.'rc';  # user configuration file
+$::cfg_path_syscfg          = File::Spec->catfile($::SYSCONFDIR, $::PROGRAM.'.conf');  # system-wide configuration file
 $::cfg_show_extracted       = 1;                  # always show extracted file/directory
 $::cfg_strip_unknown_ext    = 1;                  # strip unknown extensions
 $::cfg_tmpdir_name          = 'Unpack-%04d';      # extraction directory name
@@ -148,22 +155,21 @@ Getopt::Long::GetOptions(
 
 # Display --version
 if ($::opt_cmd_version) {
-	print
-"@PACKAGE_NAME@ @PACKAGE_VERSION@\
-Written by Oskar Liljeblad.\
-\
-Copyright (C) 2005 Oskar Liljeblad\
-This is free software; see the source for copying conditions.  There is NO\
-warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n";
+	print $::PACKAGE.' '.$::VERSION."\
+Copyright (C) 2001, 2002, 2003, 2004, 2005, 2007, 2008 Oskar Liljeblad\
+This is free software.  You may redistribute copies of it under the terms of
+the GNU General Public License <http://www.gnu.org/licenses/gpl.html>.
+There is NO WARRANTY, to the extent permitted by law.
+
+Written by Oskar Liljeblad.\n";
 	exit;
 }
 
 # Display --help
 if ($::opt_cmd_help) {
-	print
-"Usage: @PACKAGE_NAME@ [OPTION]... ARCHIVE [FILE]...\
-       @PACKAGE_NAME@ -e [OPTION]... [ARCHIVE]...
-Managing file archives of various types.\
+	print "Usage: $::PROGRAM [OPTION]... ARCHIVE [FILE]...\n";
+	print "       $::PROGRAM -e [OPTION]... [ARCHIVE]...\n";
+	print "Manage file archives of various types.\
 \
 Commands:\
   -l, --list              list files in archive (als)\
@@ -186,14 +192,14 @@ Options:\
   -V, --verbosity=LEVEL   specify verbosity (0, 1 or 2)\
   -p, --page              send output through pager\
   -0, --null              filenames from standard in are null-byte separated\
-  -E, --explain           explain what is being done by @PACKAGE_NAME@\
+  -E, --explain           explain what is being done by ".$::PROGRAM."\
   -S, --simulate          simulation mode - no filesystem changes are made\
       --config=FILE       load configuration defaults from file\
 \
 Archive format (for --format) may be specified either as a\
 file extension (\"tar.gz\") or as \"tar+gzip\".\
 \
-Report bugs to Oskar Liljeblad <oskar\@osk.mine.nu>.\
+Report bugs to Oskar Liljeblad <".$::BUG_EMAIL.">.\
 ";
 	exit;
 }
@@ -336,7 +342,7 @@ else {
 }
 
 # runcmds(mode, format, archive, args)
-# Execute an @PACKAGE_NAME@ command. This is where it all happens.
+# Execute an atool command. This is where it all happens.
 # If mode is 'extract', returns the directory (or only file)
 # which was extracted.
 # If forceformat is undef, the format will be detected from 
@@ -412,6 +418,13 @@ sub runcmds($$$;@) {
 		push @cmd, $::cfg_path_7z, 'x', '-so', $archive, ['|']	if $mode ne 'add';
 		push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
 		push @cmd, ['|'], $::cfg_path_7z, 'a', '-si', $archive if $mode eq 'add';
+		return multiarchivecmd($archive, $outdir, $mode, 1, 0, \@args, @cmd);
+	}
+	elsif ($format eq 'tar+lzma') {
+        	return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
+		push @cmd, $::cfg_path_lzma, '-cd', $archive, ['|']     if $mode ne 'add';
+		push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
+		push @cmd, ['|'], $::cfg_path_lzma, ['>'], $archive if $mode eq 'add';
 		return multiarchivecmd($archive, $outdir, $mode, 1, 0, \@args, @cmd);
 	}
 	elsif ($format eq 'tar') {
@@ -721,6 +734,9 @@ sub runcmds($$$;@) {
 		} else {
 			return singlearchivecmd($archive, $::cfg_path_compress, $format, $mode, @args);
 		}
+	}
+	elsif ($format eq 'lzma') {
+		return singlearchivecmd($archive, $::cfg_path_lzma, $format, $mode, @args);
 	}
 	elsif ($format eq 'lzop') {
 		return singlearchivecmd($archive, $::cfg_path_lzop, $format, $mode, '-U', @args);
@@ -1136,6 +1152,7 @@ sub stripext($) {
   return $file if ($file =~ s/(\.tar\.gz|\.tgz)$//);
   return $file if ($file =~ s/(\.tar\.Z|\.tZ)$//);
   return $file if ($file =~ s/(\.tar\.7z|\.t7z)$//);
+  return $file if ($file =~ s/(\.tar\.lzma|\.tlzma)$//);
   return $file if ($file =~ s/\.tar$//);
   return $file if ($file =~ s/\.bz2$//);
   return $file if ($file =~ s/\.bz$//);
@@ -1151,6 +1168,7 @@ sub stripext($) {
   return $file if ($file =~ s/\.ace$//);
   return $file if ($file =~ s/\.arj$//);
   return $file if ($file =~ s/\.a$//);
+  return $file if ($file =~ s/\.lzma$//);
   return $file if ($file =~ s/\.rpm$//);
   return $file if ($file =~ s/\.deb$//);
   return $file if ($file =~ s/\.cpio$//);
@@ -1168,9 +1186,11 @@ sub formatext($) {
   return '.tar.bz'   if $format eq 'tar+bzip';
   return '.tar.7z'   if $format eq 'tar+7z';
   return '.tar.lzo'  if $format eq 'tar+lzop';
+  return '.tar.lzma' if $format eq 'tar+lzma';
   return '.tar.Z'    if $format eq 'tar+compress';
   return '.tar'      if $format eq 'tar';
   return '.bz2'      if $format eq 'bzip2';
+  return '.lzma'     if $format eq 'lzma';
   return '.7z'       if $format eq '7z';
   return '.alz'      if $format eq 'alzip';
   return '.bz'       if $format eq 'bzip';
@@ -1202,6 +1222,7 @@ sub issingleformat($) {
   return 1 if $fmt eq 'gzip';
   return 1 if $fmt eq 'bzip';
   return 1 if $fmt eq 'compress';
+  return 1 if $fmt eq 'lzma';
   return 1 if $fmt eq 'lzop';
   return 0;
 }
@@ -1239,6 +1260,7 @@ sub findformat($$) {
     ['bzip',           qr/ \(bzip compressed data(\W|$)/],
     ['gzip',           qr/ \(gzip compressed data(\W|$)/],
     ['compress',       qr/ \(compress'd data(\W|$)/],
+    #['lzma',           qr/^lzma compressed data /], # Not in my magic
     ['lzop',           qr/^lzop compressed data /],
     #['bzip2',         qr/^bzip2 compressed data(\W|$)/],
     #['bzip',          qr/^bzip compressed data(\W|$)/],
@@ -1252,6 +1274,7 @@ sub findformat($$) {
     ['tar+gzip',       qr/(\.tar\.gz|\.tgz)$/],
     ['tar+lzop',       qr/(\.tar\.lzo|\.tzo)$/],
     ['tar+7z',         qr/(\.tar\.7z|\.t7z)$/],
+    ['tar+lzma',       qr/(\.tar\.lzma|\.tlzma)$/],
     ['7z',             qr/\.7z$/],
     ['alzip',          qr/\.alz$/],
     ['arc',            qr/\.arc$/],
@@ -1259,6 +1282,7 @@ sub findformat($$) {
     ['arj',            qr/\.arj$/],
     ['bzip',           qr/\.bz$/],
     ['bzip2',          qr/\.bz2$/],
+    ['lzma',           qr/\.lzma$/],
     ['compress',       qr/\.[zZ]$/],
     ['cpio',           qr/\.cpio$/],
     ['gzip',           qr/\.gz$/],
@@ -1266,6 +1290,7 @@ sub findformat($$) {
     ['lha',            qr/\.(lha|lzh)$/],
     ['cab',            qr/\.cab$/],
     ['lzop',           qr/\.lzo$/],
+    ['lzma',           qr/\.lzma$/],
     ['rar',            qr/\.rar$/],
     ['rpm',            qr/\.rpm$/],
     ['deb',            qr/\.deb$/],
@@ -1401,6 +1426,7 @@ sub readconfig($$) {
 		'path_jar'                => \$::cfg_path_jar,
 		'path_lha'                => \$::cfg_path_lha,
 		'path_lzop'               => \$::cfg_path_lzop,
+		'path_lzma'               => \$::cfg_path_lzma,
 		'path_nomarch'            => \$::cfg_path_nomarch,
 		'path_pager'              => \$::cfg_path_pager,
 		'path_rar'                => \$::cfg_path_rar,
@@ -1457,7 +1483,7 @@ sub readconfig($$) {
 
 # Remove a directory recursively. This function used to change
 # the mode on the directories is traverses, but I now consider
-# that to be unsafe (what if there's a bug in @PACKAGE_NAME@ and it
+# that to be unsafe (what if there's a bug in atool and it
 # removes a file it shouldn't?).
 sub unlink_directory($) {
 	my ($dir) = @_;

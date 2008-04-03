@@ -1,3 +1,9 @@
+2008-04-03: atool 0.34.0 released.
+  Added support for lzma (suggested by Ed Avis and Leif Thande, patch from
+  Nick Matteo).
+  Added extra directory.
+  Now using automake.
+
 2007-08-22: atool 0.33.0 released.
   Change order of arguments in tar commands.
   Use 'f' option to tar when using archive from stdin/to stdout (by
