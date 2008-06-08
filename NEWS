@@ -1,3 +1,19 @@
+2008-06-08: atool 0.35.0 released.
+  Now detect self-extracting ZIP archives using file (suggested by Jens
+  Schleusener).
+  Added "use_file_always" option to always identify using file (suggested
+  by Thomas Link).
+  Now identify compressed files (bzip2, bzip, gzip, compress) when using
+  "use_file" option.
+  Improved error messages (from Ed Avis).
+  Fix manpage hyphens (patch from Francois Marier).
+  Added -o, --option option to change a configuration option.
+  Added support for rzip and lrzip archives.
+  Use '-c' option with compressors such as gzip and bzip2 when piping
+  output.
+  Added support for pbzip2 (added configuration options path_pbzip2 and
+  use_pbzip2).
+
 2008-04-03: atool 0.34.0 released.
   Added support for lzma (suggested by Ed Avis and Leif Thande, patch from
   Nick Matteo).

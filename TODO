@@ -1,8 +1,5 @@
 if making RPM, then upload SRPM as well
 
-add support for lrzip: http://ck.kolivas.org/apps/lrzip/
-from Thomas Link: force atool to identify files using file
-
 ---
 arepack should print how many bytes were saved for each archive, and in total (Meino Christian Cramer).
 fix FIXMEs in AUTHORS file

@@ -158,7 +158,7 @@ If no file arguments are specified when creating or adding files
 to archives, the list of files will be read from standard in.
 Normally these filenames are separated by newline, but with this
 option they are separated by null-bytes. This is useful with the
-GNU find -print0 option.
+GNU find \-print0 option.
 .TP
 .B \-q, \-\-quiet
 Decrease verbosity level by one. This is subtracted from the
@@ -183,12 +183,18 @@ option, the system-wide and user-wide configuration files
 will not be loaded. If the specified file does not exist or
 can not be read, atool will terminate with an error message.
 .TP
+.B \-o, \-\-option\fR=\fIKEY=VALUE\fR
+Override a configuration option. These are applied after
+reading the configuration files.
+
+You can specify this multiple times to override different options.
+.TP
 .B \-\-save\-outdir\fR=\fIFILE\fR
 When extracting files, save the name of the directory which
 the archive was extracted to to the specified file. If the
 command was not `extract', or the archive was not extracted to
 a new directory, then nothing will be written to the specified
-file. If multiple archives were specified (with -e), then
+file. If multiple archives were specified (with \-e), then
 only the last directory that files were extracted to will be
 written to FILE.
 
@@ -292,10 +298,16 @@ Cat, extract, and add commands are supported.
 .RI \fBlzop\fP " " ( .lzo )
 Cat, extract, and add commands are supported.
 .TP
+.RI \fBrzip\fP " " ( .rz )
+Extract and add commands are supported.
+.TP
+.RI \fBlrzip\fP " " ( .lrz )
+Extract and add commands are supported.
+.TP
 .RI \fB7zip\fP " " ( .7z )
 All commands are supported.
 (Note that 7z refuses to write extracted files to standard out
-if standard out is a terminal. Use -p or pipe the output
+if standard out is a terminal. Use \-p or pipe the output
 of atool/acat to a pager when reading in a terminal.)
 .TP
 .RI \fBcpio\fP " " ( .cpio )
@@ -326,15 +338,15 @@ the first non-whitespace character and end at the end of the line.
 The options are:
 .TP
 .B use_tar_bzip2_option \fR(default: 1)\fR
-Enable this if you use GNU tar and it supports the \fB\--bzip2\fP option
+Enable this if you use GNU tar and it supports the \fB\-\-bzip2\fP option
 for filtering bzip2'ed files through bzip2. Versions 1.13.6
-or later of GNU tar support \fB\--bzip2\fP. Therefore, if you use
+or later of GNU tar support \fB\-\-bzip2\fP. Therefore, if you use
 GNU tar earlier than 1.13.6, you will need to disable this option.
 
-This used to be \fBuse_tar_j_option\fP but using --bzip2 is more portable.
+This used to be \fBuse_tar_j_option\fP but using \-\-bzip2 is more portable.
 .TP
 .B use_tar_z_option \fR(default: 1)\fR
-Enable this if you use GNU tar and it supports the \fB-z\fP option
+Enable this if you use GNU tar and it supports the \fB\-z\fP option
 for filtering gzipped files through gzip. You will need to disable
 this and \fIuse_tar_j_option\fR if you don't use GNU tar.
 
@@ -365,8 +377,8 @@ when possible. This makes atool use the arj command
 (path_arj) even when listing and extracting ARJ files.
 .TP
 .B use_find_cpio_print0 \fR(default: 1)\fR
-Enable this if find supports the -print0 option and cpio supports
-the -0 option. Without it, it is impossible/harder to make cpio
+Enable this if find supports the \-print0 option and cpio supports
+the \-0 option. Without it, it is impossible/harder to make cpio
 archives of files with newline characters in their names.
 .TP
 .B extract_deb_control \fR(default: 1)\fR
@@ -384,6 +396,13 @@ this option set to 0. The output file in that case would be something
 like Unpack-XYZW. Setting this option to 1 will cause the extension
 to be stripped instead.
 .TP
+.B use_pbzip2 \fR(default: 0)\fR
+Enable this if you want to use pbzip2 rather than bzip2.
+Please not that if use_tar_bzip2_option is enabled, then
+bzip2 will be used by tar regardless of the use_pbzip2
+option. So if you want tar to use pbzip2 rather than bzip2,
+set use_pbzip2 to 1 and use_tar_bzip2_option to 0.
+.TP
 .B use_jar \fR(default: 0)\fR
 Enable this if you want to use jar for managing jar
 archives. If you disable this option, zip will be
@@ -397,11 +416,13 @@ files to standard out (`cat') is not supported by jar.
 Enable this if you want atool to identify file types
 using file(1) for those files with an unrecognized
 extension (or none at all).
-    
-Note that tar-archives compressed with a file compressor
-(such as gzip, bzip2 and so on) can't be identified this way.
-For this reason, files packed with gzip and other file
-compressors are not identified either.
+.TP
+.B use_file_always \fR(default: 0)\fR
+Enable this if you want atool to always identify archives
+using file(1), regardless of the file extension. Please note
+that this currently has some drawbacks, such as not being able
+to identify all archive types (especially tar archives compressed
+with 7zip, lzop, szip etc).
 .TP
 .B tmpdir_name \fR(default: Unpack-%04d)\fR
 atool extracts to a temporary directory created in the current
@@ -411,6 +432,11 @@ controlls what name that temporary directory should have.
 The `%d' string in this variable will be replaced with a random
 number between 0 and 9999. It is possible change the format
 of this number by using something else than `%d' - see printf(3).
+.TP
+.B tmpfile_name \fR(default: Pack-%04d)\fR
+When using pbzip2, and creating archives, a temporary file need
+to be created. This option controls the name of that file.
+See tmpdir_name for further details on the format.
 .TP
 .B path_pager \fR(default: pager)\fR
 .TP
@@ -427,6 +453,8 @@ of this number by using something else than `%d' - see printf(3).
 .B path_bzip \fR(default: bzip)\fR
 .TP
 .B path_bzip2 \fR(default: bzip2)\fR
+.TP
+.B path_pbzip2 \fR(default: pbzip2)\fR
 .TP
 .B path_compress \fR(default: compress)\fR
 .TP
@@ -479,7 +507,7 @@ These are all paths to the corresponding programs. It is usually
 best to leave them as is, because that way their locations can be
 looked up from the PATH variable.
 .TP
-.B args_diff \fR(default: -ru)\fR
+.B args_diff \fR(default: \-ru)\fR
 This variable specifies command line arguments to pass to the
 diff command (as specified by path_diff) when using adiff. Space
 characters separate arguments in this string.
@@ -498,7 +526,7 @@ being with `/'), it will be relative to the current user's home
 directory (as determined by the HOME environment variable).
 .TP
 .B default_verbosity \fR(default: 1)\fR
-This is the default verbosity of atool. By using -q and -v
+This is the default verbosity of atool. By using \-q and \-v
 options, the verbosity level can be raised and lowered.
 Level 1 means "normal verbosity" - e.g. when creating and
 extracting from archives, files will be listed.
@@ -512,7 +540,7 @@ existing or the archive having multiple files in its root
 directory).
 
 This can be quite useful in combinatiaon with `default_verbosity 0'.
-Note that this option will have no effect when the -X option is used
+Note that this option will have no effect when the \-X option is used
 with aunpack, and it has no effect on compressed files.
 .TP
 .B keep_compressed \fR(default: 1)\fR
@@ -527,7 +555,7 @@ files. When set to 1, the original (compressed) file will be kept.
 Otherwise it will be deleted.
 
 Note however that this option has no effect when packing up a compressed
-file with the -X option (for specifying an output directory or file). In
+file with the \-X option (for specifying an output directory or file). In
 that case the original file is always kept.
 .TP
 .B decompress_to_cwd \fR(default: 1)\fR
@@ -536,11 +564,11 @@ decompressed file is usually placed in the same directory as the
 compressed file. With this option set to 1, the decompressed file is
 instead placed in the current working directory.
 
-Note that this option has no effect when -X is used.
+Note that this option has no effect when \-X is used.
 
 .SH ENVIRONMENT VARIABLES
 .B PAGER
-The default pager to use when the -p/--page option is specified.
+The default pager to use when the \-p/\-\-page option is specified.
 .SH EXAMPLES
 To extract all files from archive `foobar.tar.gz' to a subdirectory
 (or the current directory if it only contains one file):
@@ -550,7 +578,7 @@ To extract all files from archive `foobar.tar.gz' to a subdirectory
 To extract all files from all `.tar.gz' archives in the
 current directory:
 .br
-	\fBaunpack -e *.tar.gz\fP
+	\fBaunpack \-e *.tar.gz\fP
 .PP
 To create a zip archive of two files `foo' and `bar':
 .br
@@ -559,7 +587,7 @@ To create a zip archive of two files `foo' and `bar':
 To display the file `baz' in the archive `myarchive.zip'
 through a pager:
 .br
-	\fBacat -p myarchive.zip baz\fP
+	\fBacat \-p myarchive.zip baz\fP
 .PP
 To list contents of the rar archive `stuff.rar':
 .br
@@ -569,7 +597,7 @@ To create three archives, `dir1.tar.gz', `dir2.tar.gz' and `dir3.tar.gz',
 so that the first one contains all files in dir1, the second all
 in dir2 and the third all dir3:
 .br
-	\fBapack -e -F .tar.gz dir1 dir2 dir3\fP
+	\fBapack \-e \-F .tar.gz dir1 dir2 dir3\fP
 .PP
 To show all differences between version 2.4.17 and 2.4.18 of the kernel:
 .br
@@ -578,7 +606,7 @@ To show all differences between version 2.4.17 and 2.4.18 of the kernel:
 To repack all .tar.gz archives in the current directory to .tar.7z (the
 old archive will be kept untouched):
 .br
-	\fBarepack -F.tar.7z -e *.tar.gz\fP
+	\fBarepack \-F.tar.7z \-e *.tar.gz\fP
 .PP
 Here's a shell function that will make the aunpack command change into the
 directory where files were extracted:
@@ -587,11 +615,11 @@ directory where files were extracted:
 .br
 	\fB  TMP=`mktemp /tmp/aunpack.XXXXXXXXXX`\fP
 .br
-	\fB  atool -x --save-outdir=$TMP "$@"\fP
+	\fB  atool \-x \-\-save-outdir=$TMP "$@"\fP
 .br
 	\fB  DIR="`cat $TMP`"\fP
 .br
-	\fB  [ "$DIR" != "" -a -d "$DIR" ] && cd "$DIR"\fP
+	\fB  [ "$DIR" != "" \-a \-d "$DIR" ] && cd "$DIR"\fP
 .br
 	\fB  rm $TMP\fP
 .br
@@ -610,7 +638,7 @@ etc) extension won't work:
   aunpack: foo: format is `gzip'
   gzip: foo: unknown suffix -- ignored
 .PP
-This last error above is generated by \fBgzip -d foo\fP.
+This last error above is generated by \fBgzip \-d foo\fP.
 .PP
 If you find a bug not listed here, please report it to <oskar@osk.mine.nu>.
 .SH REPORTING BUGS
