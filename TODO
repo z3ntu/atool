@@ -1,3 +1,9 @@
+fIXME: apack foo.rar does not work properly due to -r?
+
+
+From Francois Marier <francois@debian.org>:
+  check if pbzip2 is in the path and use it
+
 if making RPM, then upload SRPM as well
 
 ---

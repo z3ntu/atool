@@ -1,3 +1,9 @@
+2009-02-26: atool 0.36.0 released.
+  Fix problem not identifying ZIP archives using file (from mollifier).
+  Fix problem with escaping characters in UTF-8 locales.
+  Don't use -r when creating rar archives, it recurses subdirs as expected
+  by default.
+
 2008-06-08: atool 0.35.0 released.
   Now detect self-extracting ZIP archives using file (suggested by Jens
   Schleusener).

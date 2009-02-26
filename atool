@@ -2,7 +2,8 @@
 #
 # atool - A script for managing file archives of various types.
 #
-# Copyright (C) 2001, 2002, 2003, 2004, 2005, 2007, 2008 Oskar Liljeblad
+# Copyright (C) 2001, 2002, 2003, 2004, 2005, 2007, 2008,
+# 2009 Oskar Liljeblad
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,6 +23,15 @@
 #
 # This file uses tab stops with a length of two.
 #
+
+# XXX: We could use -CLSDA but 5.10.0 has a bug which prevents us from
+# specifying this with shebang. Thanks to some helpful dude on #perl
+# FreeNode.
+if (${^UTF8LOCALE}) {
+  use Encode qw(decode_utf8);
+  binmode($_, ':encoding(UTF-8)') for \*STDIN, \*STDOUT, \*STDERR;
+  $_ = decode_utf8($_) for @ARGV, values %ENV;
+}
 
 use File::Basename;
 use File::Spec;
@@ -64,7 +74,7 @@ sub set_config_option($$$);
 
 $::SYSCONFDIR = '/etc'; # This line is automatically updated by make
 $::PACKAGE = 'atool'; # This line is automatically updated by make
-$::VERSION = '0.35.0'; # This line is automatically updated by make
+$::VERSION = '0.36.0'; # This line is automatically updated by make
 $::BUG_EMAIL = 'oskar@osk.mine.nu'; # This line is automatically updated by make
 $::PROGRAM = $::PACKAGE;
 
@@ -506,7 +516,7 @@ sub runcmds($$$;@) {
     push @cmd, 'l' if $mode eq 'list' && $::opt_verbosity <= 1;
     push @cmd, 'x' if ($mode eq 'extract' || $mode eq 'extract-to');
     push @cmd, '-ierr', 'p' if $mode eq 'cat';
-    push @cmd, '-r' if ($mode eq 'add');
+    push @cmd, '-r0' if ($mode eq 'add');
     push @cmd, $archive, @args;
     push @cmd, tailslash($outdir) if $mode eq 'extract';
     push @cmd, tailslash($::opt_cmd_extract_to) if $mode eq 'extract-to';
@@ -663,7 +673,7 @@ sub runcmds($$$;@) {
     }
     else { # add and cat
       # FIXME: I guess cat could work too, but it would require that we
-        # extracted to a temporary dir, read and printed it, then removed it.
+      # extracted to a temporary dir, read and printed it, then removed it.
       warn "$::basename: ".quote($archive).": $mode command not supported for $format archives\n";
       return undef;
     }
@@ -1292,6 +1302,7 @@ sub findformat($$) {
     ['tar+bzip',       qr/^(GNU|POSIX) tar archive \(bzip compressed data(\W|$)/],
     ['tar+compress',   qr/^(GNU|POSIX) tar archive \(compress'd data(\W|$)/],
     ['tar',            qr/^(GNU|POSIX) tar archive(\W|$)/],
+    ['zip',            qr/ \(Zip archive data[^)]+\)$/],
     ['zip',            qr/^Zip archive data(\W|$)/],
     ['zip',            qr/^MS-DOS executable (.*), ZIP self-extracting archive(\W|$)/],
     ['rar',            qr/^RAR archive data(\W|$)/],
@@ -1630,7 +1641,7 @@ sub quote($) {
       $out .= "\\\\";
     } elsif ($ch eq "'") {
       $out .= "\\'";
-    } elsif (!POSIX::isprint($ch)) {
+    } elsif ($ch !~ /[[:print:]]/) {
       $out .= sprintf('\\%03o', ord($ch));
     } else {
       $out .= $ch;

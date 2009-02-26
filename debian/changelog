@@ -1,3 +1,9 @@
+atool (0.36.0-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Oskar Liljeblad <oskar@osk.mine.nu>  Thu, 26 Feb 2009 18:23:34 +0100
+
 atool (0.35.0-1) unstable; urgency=low
 
   * New upstream release.
