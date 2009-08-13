@@ -72,54 +72,57 @@ sub issingleformat($);
 sub repack_archive($$$$);
 sub set_config_option($$$);
 
-$::SYSCONFDIR = '/etc'; # This line is automatically updated by make
+$::SYSCONFDIR = '/usr/local/etc'; # This line is automatically updated by make
 $::PACKAGE = 'atool'; # This line is automatically updated by make
-$::VERSION = '0.36.0'; # This line is automatically updated by make
+$::VERSION = '0.37.0'; # This line is automatically updated by make
 $::BUG_EMAIL = 'oskar@osk.mine.nu'; # This line is automatically updated by make
 $::PROGRAM = $::PACKAGE;
 
 # Configuration options and their built-in defaults
 $::cfg_args_diff            = '-ru';              # arguments to pass to diff program
-$::cfg_default_verbosity    = 1;                  # default verbosity level
-$::cfg_keep_compressed      = 1;                  # keep compressed file after pack/unpack
 $::cfg_decompress_to_cwd    = 1;                  # decompress to current directory
+$::cfg_default_verbosity    = 1;                  # default verbosity level
+$::cfg_extract_deb_control  = 1;                  # extract DEBIAN control dir from .deb packages?
+$::cfg_keep_compressed      = 1;                  # keep compressed file after pack/unpack
 $::cfg_path_7z              = '7z';               # 7z program
 $::cfg_path_ar              = 'ar';               # ar program
 $::cfg_path_arc             = 'arc';              # arc program
 $::cfg_path_arj             = 'arj';              # arj program
 $::cfg_path_bzip            = 'bzip';             # bzip program
 $::cfg_path_bzip2           = 'bzip2';            # bzip2 program
-$::cfg_path_pbzip2          = 'pbzip2';           # pbzip2 program
 $::cfg_path_cabextract      = 'cabextract';       # cabextract program
 $::cfg_path_cat             = 'cat';              # cat program
 $::cfg_path_compress        = 'compress';         # compress program
 $::cfg_path_cpio            = 'cpio';             # cpio program
 $::cfg_path_diff            = 'diff';             # diff program
+$::cfg_path_dpkg_deb        = 'dpkg-deb';         # dpkg-deb program
 $::cfg_path_file            = 'file';             # file program
 $::cfg_path_find            = 'find';             # find program
 $::cfg_path_gzip            = 'gzip';             # gzip program
 $::cfg_path_jar             = 'jar';              # jar program
 $::cfg_path_lha             = 'lha';              # lha program
+$::cfg_path_lrzip	    = 'lrzip';		  # lrzip program
+$::cfg_path_lzip            = 'lzip';             # lzip program
 $::cfg_path_lzma            = 'lzma';             # lzma program
 $::cfg_path_lzop            = 'lzop';             # lzop program
 $::cfg_path_nomarch         = 'nomarch';          # nomarch program
 $::cfg_path_pager           = 'pager';            # pager program
+$::cfg_path_pbzip2          = 'pbzip2';           # pbzip2 program
 $::cfg_path_rar             = 'rar';              # rar program
 $::cfg_path_rpm             = 'rpm';              # rpm program
 $::cfg_path_rpm2cpio        = 'rpm2cpio';         # rpm2cpio program
 $::cfg_path_rzip	    = 'rzip';		  # rzip program
-$::cfg_path_lrzip	    = 'lrzip';		  # lrzip program
-$::cfg_path_dpkg_deb        = 'dpkg-deb';         # dpkg-deb program
+$::cfg_path_syscfg          = File::Spec->catfile($::SYSCONFDIR, $::PROGRAM.'.conf');  # system-wide configuration file
 $::cfg_path_tar             = 'tar';              # tar program
 $::cfg_path_unace           = 'unace';            # unace program
 $::cfg_path_unalz           = 'unalz';            # unalz program
 $::cfg_path_unarj           = 'unarj';            # unarj program
 $::cfg_path_unrar           = 'unrar';            # unrar program
 $::cfg_path_unzip           = 'unzip';            # unzip program
-$::cfg_path_xargs           = 'xargs';            # xargs program
-$::cfg_path_zip             = 'zip';              # zip program
 $::cfg_path_usercfg         = '.'.$::PROGRAM.'rc';  # user configuration file
-$::cfg_path_syscfg          = File::Spec->catfile($::SYSCONFDIR, $::PROGRAM.'.conf');  # system-wide configuration file
+$::cfg_path_xargs           = 'xargs';            # xargs program
+$::cfg_path_xz              = 'xz';               # xz program
+$::cfg_path_zip             = 'zip';              # zip program
 $::cfg_show_extracted       = 1;                  # always show extracted file/directory
 $::cfg_strip_unknown_ext    = 1;                  # strip unknown extensions
 $::cfg_tmpdir_name          = 'Unpack-%04d';      # extraction directory name
@@ -131,11 +134,13 @@ $::cfg_use_file_always      = 0;                  # always use file to identify 
 $::cfg_use_find_cpio_print0 = 1;                  # use -print0/-0 find/cpio options?
 $::cfg_use_gzip_for_z       = 1;                  # use gzip to decompress .Z files?
 $::cfg_use_jar              = 0;                  # use jar or zip for .jar archives?
+$::cfg_use_pbzip2           = 0;                  # use pbzip2 instead of bzip2
 $::cfg_use_rar_for_unpack   = 0;                  # use rar to unpack rar files?
 $::cfg_use_tar_bzip2_option = 1;                  # does tar support --bzip2?
+$::cfg_use_tar_lzma_option  = 1;                  # does tar support --lzma?
+$::cfg_use_tar_lzop_option  = 0;                  # does tar support --lzop?
+$::cfg_use_tar_xv_option    = 0;                  # does tar support --xv?
 $::cfg_use_tar_z_option     = 1;                  # does tar support -z?
-$::cfg_use_pbzip2           = 0;                  # use pbzip2 instead of bzip2
-$::cfg_extract_deb_control  = 1;                  # extract DEBIAN control dir from .deb packages?
 
 # Global variables
 $::basename = quote(File::Basename::basename($0));
@@ -300,6 +305,7 @@ if ($mode eq 'diff') {
 }
 elsif ($mode eq 'repack') {
   if ($::opt_each) {
+    my $totaldiff = 0;
     if (!defined $::opt_format) {
       die "$::basename: specify a format with -F when using --each in repack mode\n";
     }
@@ -323,6 +329,17 @@ elsif ($mode eq 'repack') {
         next;
       }
       repack_archive($ARGV[$c], $newname, $fmt1, $fmt2);
+      my $diff = ($::opt_simulate ? 0 : -s $ARGV[$c] - -s $newname);
+      $totaldiff += $diff;
+      if ($::opt_verbosity >= 1) {
+        print quote($newname), ': ',
+            ($diff >= 0 ? 'saved '.$diff : 'grew '.-$diff),' ',
+            ($diff == 1 ? 'byte':'bytes'), "\n";
+      }
+    }
+    if ($::opt_verbosity >= 1) {
+      print $totaldiff >= 0 ? 'saved '.$totaldiff : 'grew '.-$totaldiff, ' ',
+          $totaldiff == 1 ? 'byte':'bytes', " in total\n";
     }
   } else {
     die "$::basename: missing archive arguments\n" if (@ARGV < 1); #OK
@@ -336,6 +353,12 @@ elsif ($mode eq 'repack') {
       if (!issingleformat($fmt1) && issingleformat($fmt2));
     die "$::basename: will not repack to same archive type\n" if $fmt1 eq $fmt2;
     repack_archive($ARGV[0], $ARGV[1], $fmt1, $fmt2);
+    my $diff = ($::opt_simulate ? 0 : (-s $ARGV[0]) - (-s $ARGV[1]));
+    if ($::opt_verbosity >= 1) {
+      print quote($ARGV[1]), ': ',
+          ($diff >= 0 ? 'saved '.$diff : 'grew '.-$diff),' ',
+          ($diff == 1 ? 'byte':'bytes'), "\n";
+    }
   }
 }
 elsif ($::opt_each) {
@@ -392,6 +415,7 @@ sub runcmds($$$;@) {
       push @cmd, maketarcmd($archive, $outdir, $mode, 'f', '--bzip2'), @args;
     } elsif ($::cfg_use_pbzip2) {
       if ($mode eq 'add') {
+        # Unfortunately pbzip2 cannot read from standard in
         my $tmpname = makeoutfile($::cfg_tmpfile_name);
         push @cmd, maketarcmd($tmpname, $outdir, $mode, 'f'), @args;
         push @cmd, [';'], $::cfg_path_pbzip2, '-c', $tmpname, ['>'], $archive;
@@ -442,9 +466,33 @@ sub runcmds($$$;@) {
   }
   elsif ($format eq 'tar+lzop') {
     return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
-    push @cmd, $::cfg_path_lzop, '-Ucd', $archive, ['|'] if $mode ne 'add';
+    if ($::cfg_use_tar_lzop_option) {
+      push @cmd, maketarcmd($archive, $outdir, $mode, 'f', '--lzop'), @args;
+    } else {
+      push @cmd, $::cfg_path_lzop, '-cd', $archive, ['|'] if $mode ne 'add';
+      push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
+      push @cmd, ['|'], $::cfg_path_lzop, '-c', ['>'], $archive if $mode eq 'add';
+    }
+    @cmd = handle_empty_add(@cmd) if ($mode eq 'add' && @args == 0);
+    return multiarchivecmd($archive, $outdir, $mode, 1, 0, \@args, @cmd);
+  }
+  elsif ($format eq 'tar+lzip') {
+    return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
+    push @cmd, $::cfg_path_lzip, '-cd', $archive, ['|'] if $mode ne 'add';
     push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
-    push @cmd, ['|'], $::cfg_path_lzop, '-c', ['>'], $archive if $mode eq 'add';
+    push @cmd, ['|'], $::cfg_path_lzip, '-c', ['>'], $archive if $mode eq 'add';
+    @cmd = handle_empty_add(@cmd) if ($mode eq 'add' && @args == 0);
+    return multiarchivecmd($archive, $outdir, $mode, 1, 0, \@args, @cmd);
+  }
+  elsif ($format eq 'tar+xz') {
+    return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
+    if ($::cfg_use_tar_xv_option) {
+      push @cmd, maketarcmd($archive, $outdir, $mode, 'f', '--xv'), @args;
+    } else {
+      push @cmd, $::cfg_path_xz, '-cd', $archive, ['|'] if $mode ne 'add';
+      push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
+      push @cmd, ['|'], $::cfg_path_xz, '-c', ['>'], $archive if $mode eq 'add';
+    }
     @cmd = handle_empty_add(@cmd) if ($mode eq 'add' && @args == 0);
     return multiarchivecmd($archive, $outdir, $mode, 1, 0, \@args, @cmd);
   }
@@ -453,13 +501,19 @@ sub runcmds($$$;@) {
     push @cmd, $::cfg_path_7z, 'x', '-so', $archive, ['|']  if $mode ne 'add';
     push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
     push @cmd, ['|'], $::cfg_path_7z, 'a', '-si', $archive if $mode eq 'add';
+    @cmd = handle_empty_add(@cmd) if ($mode eq 'add' && @args == 0);
     return multiarchivecmd($archive, $outdir, $mode, 1, 0, \@args, @cmd);
   }
   elsif ($format eq 'tar+lzma') {
-          return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
-    push @cmd, $::cfg_path_lzma, '-cd', $archive, ['|']     if $mode ne 'add';
-    push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
-    push @cmd, ['|'], $::cfg_path_lzma, '-c', ['>'], $archive if $mode eq 'add';
+    return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
+    if ($::cfg_use_tar_lzma_option) {
+      push @cmd, maketarcmd($archive, $outdir, $mode, 'f', '--lzma'), @args;
+    } else {
+      push @cmd, $::cfg_path_lzma, '-cd', $archive, ['|']     if $mode ne 'add';
+      push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
+      push @cmd, ['|'], $::cfg_path_lzma, '-c', ['>'], $archive if $mode eq 'add';
+    }
+    @cmd = handle_empty_add(@cmd) if ($mode eq 'add' && @args == 0);
     return multiarchivecmd($archive, $outdir, $mode, 1, 0, \@args, @cmd);
   }
   elsif ($format eq 'tar') {
@@ -774,7 +828,13 @@ sub runcmds($$$;@) {
     return singlearchivecmd($archive, $::cfg_path_lzma, $format, $mode, 1, @args);
   }
   elsif ($format eq 'lzop') {
-    return singlearchivecmd($archive, $::cfg_path_lzop, $format, $mode, 1, '-U', @args);
+    return singlearchivecmd($archive, $::cfg_path_lzop, $format, $mode, 0, @args);
+  }
+  elsif ($format eq 'lzip') {
+    return singlearchivecmd($archive, $::cfg_path_lzip, $format, $mode, 1, @args);
+  }
+  elsif ($format eq 'xz') {
+    return singlearchivecmd($archive, $::cfg_path_xz, $format, $mode, 1, @args);
   }
   elsif ($format eq 'rzip') {
     return singlearchivecmd($archive, $::cfg_path_rzip, $format, $mode, 0, @args);
@@ -1211,9 +1271,12 @@ sub stripext($) {
   return $file if ($file =~ s/(\.tar\.Z|\.tZ)$//);
   return $file if ($file =~ s/(\.tar\.7z|\.t7z)$//);
   return $file if ($file =~ s/(\.tar\.lzma|\.tlzma)$//);
+  return $file if ($file =~ s/(\.tar\.lzo|\.lzo)$//);
+  return $file if ($file =~ s/(\.tar\.lz|\.lz)$//);
   return $file if ($file =~ s/\.tar$//);
   return $file if ($file =~ s/\.bz2$//);
   return $file if ($file =~ s/\.bz$//);
+  return $file if ($file =~ s/\.lz$//);
   return $file if ($file =~ s/\.gz$//);
   return $file if ($file =~ s/\.zip$//);
   return $file if ($file =~ s/\.7z$//);
@@ -1245,6 +1308,8 @@ sub formatext($) {
   return '.tar.7z'   if $format eq 'tar+7z';
   return '.tar.lzo'  if $format eq 'tar+lzop';
   return '.tar.lzma' if $format eq 'tar+lzma';
+  return '.tar.lz'   if $format eq 'tar+lzip';
+  return '.tar.xz'   if $format eq 'tar+xz';
   return '.tar.Z'    if $format eq 'tar+compress';
   return '.tar'      if $format eq 'tar';
   return '.bz2'      if $format eq 'bzip2';
@@ -1254,6 +1319,8 @@ sub formatext($) {
   return '.bz'       if $format eq 'bzip';
   return '.gz'       if $format eq 'gzip';
   return '.lzo'      if $format eq 'lzop';
+  return '.lz'       if $format eq 'lzip';
+  return '.xz'       if $format eq 'xzip';
   return '.rz'       if $format eq 'rzip';
   return '.lrz'      if $format eq 'lrzip';
   return '.zip'      if $format eq 'zip';
@@ -1284,6 +1351,8 @@ sub issingleformat($) {
   return 1 if $fmt eq 'compress';
   return 1 if $fmt eq 'lzma';
   return 1 if $fmt eq 'lzop';
+  return 1 if $fmt eq 'lzip';
+  return 1 if $fmt eq 'xz';
   return 1 if $fmt eq 'rzip';
   return 1 if $fmt eq 'lrzip';
   return 0;
@@ -1326,6 +1395,8 @@ sub findformat($$) {
     ['compress',       qr/ \(compress'd data(\W|$)/],
     ['lzma',           qr/^lzma compressed data /], # Not in my magic
     ['lzop',           qr/^lzop compressed data /],
+    ['lzip',           qr/^lzip compressed data /], # Not in my magic
+    ['xz',             qr/^xz compressed data /], # Not in my magic
     ['rzip',           qr/^rzip compressed data /],
     ['lrzip',          qr/^lrzip compressed data /], # Not in my magic
     ['bzip2',          qr/^bzip2 compressed data(\W|$)/],
@@ -1334,43 +1405,48 @@ sub findformat($$) {
     ['compress',       qr/^compress'd data(\W|$)/],
   );
   my @fileextensions = (
+    ['tar+7z',         qr/(\.tar\.7z|\.t7z)$/],
     ['tar+bzip',       qr/(\.tar\.bz|\.tbz)$/],
     ['tar+bzip2',      qr/(\.tar\.bz2|\.tbz2)$/],
     ['tar+compress',   qr/(\.tar\.[zZ]|\.t[zZ])$/],
     ['tar+gzip',       qr/(\.tar\.gz|\.tgz)$/],
-    ['tar+lzop',       qr/(\.tar\.lzo|\.tzo)$/],
-    ['tar+7z',         qr/(\.tar\.7z|\.t7z)$/],
+    ['tar+lzip',       qr/(\.tar\.lz|\.tlz)$/],
     ['tar+lzma',       qr/(\.tar\.lzma|\.tlzma)$/],
+    ['tar+lzop',       qr/(\.tar\.lzo|\.tzo)$/],
+    ['tar+xz',         qr/(\.tar\.xz|\.txz)$/],
+
     ['7z',             qr/\.7z$/],
-    ['alzip',          qr/\.alz$/],
-    ['arc',            qr/\.arc$/],
     ['ace',            qr/\.ace$/],
+    ['alzip',          qr/\.alz$/],
+    ['ar',             qr/\.a$/],
+    ['arc',            qr/\.arc$/],
     ['arj',            qr/\.arj$/],
     ['bzip',           qr/\.bz$/],
     ['bzip2',          qr/\.bz2$/],
-    ['lzma',           qr/\.lzma$/],
+    ['cab',            qr/\.cab$/],
     ['compress',       qr/\.[zZ]$/],
     ['cpio',           qr/\.cpio$/],
+    ['deb',            qr/\.deb$/],
     ['gzip',           qr/\.gz$/],
     ['jar',            qr/\.(jar|war)$/],
     ['lha',            qr/\.(lha|lzh)$/],
-    ['cab',            qr/\.cab$/],
-    ['lzop',           qr/\.lzo$/],
-    ['rzip',           qr/\.rz$/],
     ['lrzip',          qr/\.lrz$/],
+    ['lzip',           qr/\.lz$/],
     ['lzma',           qr/\.lzma$/],
+    ['lzop',           qr/\.lzo$/],
     ['rar',            qr/\.rar$/],
     ['rpm',            qr/\.rpm$/],
-    ['deb',            qr/\.deb$/],
+    ['rzip',           qr/\.rz$/],
     ['tar',            qr/\.tar$/],
+    ['xz',             qr/\.xz$/],
     ['zip',            qr/\.zip$/],
-    ['ar',             qr/\.a$/],
   );
 
   if ($manual) {
     $spec =~ tr/+/./;
     $spec =~ s/^\.*/\./;
     $spec =~ s/lzop/lzo/;
+    $spec =~ s/lzip/lz/;
     $spec =~ s/rzip/rz/;
     $spec =~ s/lrzip/lrz/;
     $spec =~ s/bzip2/bz2/;
@@ -1475,74 +1551,80 @@ sub backticks(@) {
 sub set_config_option($$$) {
   my ($var, $val, $context) = @_;
   my %optionmap = (
-    'args_diff'               => \$::cfg_args_diff,
-    'default_verbosity'       => \$::cfg_default_verbosity,
-    'keep_compressed'         => \$::cfg_keep_compressed,
-    'decompress_to_cwd'       => \$::cfg_decompress_to_cwd,
-    'path_7z'                 => \$::cfg_path_7z,
-    'path_ar'                 => \$::cfg_path_ar,
-    'path_arc'                => \$::cfg_path_arc,
-    'path_arj'                => \$::cfg_path_arj,
-    'path_bzip'               => \$::cfg_path_bzip,
-    'path_bzip2'              => \$::cfg_path_bzip2,
-    'path_pbzip2'             => \$::cfg_path_pbzip2,
-    'path_cabextract'         => \$::cfg_path_cabextract,
-    'path_cat'                => \$::cfg_path_cat,
-    'path_compress'           => \$::cfg_path_compress,
-    'path_cpio'               => \$::cfg_path_cpio,
-    'path_diff'               => \$::cfg_path_diff,
-    'path_file'               => \$::cfg_path_file,
-    'path_find'               => \$::cfg_path_find,
-    'path_gzip'               => \$::cfg_path_gzip,
-    'path_jar'                => \$::cfg_path_jar,
-    'path_lha'                => \$::cfg_path_lha,
-    'path_lzop'               => \$::cfg_path_lzop,
-    'path_rzip'               => \$::cfg_path_rzip,
-    'path_lrzip'              => \$::cfg_path_lrzip,
-    'path_lzma'               => \$::cfg_path_lzma,
-    'path_nomarch'            => \$::cfg_path_nomarch,
-    'path_pager'              => \$::cfg_path_pager,
-    'path_rar'                => \$::cfg_path_rar,
-    'path_rpm'                => \$::cfg_path_rpm,
-    'path_rpm2cpio'           => \$::cfg_path_rpm2cpio,
-    'path_dpkg_deb'           => \$::cfg_path_dpkg_deb,
-    'path_tar'                => \$::cfg_path_tar,
-    'path_unace'              => \$::cfg_path_unace,
-    'path_unalz'              => \$::cfg_path_unalz,
-    'path_unarj'              => \$::cfg_path_unarj,
-    'path_unrar'              => \$::cfg_path_unrar,
-    'path_unzip'              => \$::cfg_path_unzip,
-    'path_usercfg'            => \$::cfg_path_usercfg,
-    'path_xargs'              => \$::cfg_path_xargs,
-    'path_zip'                => \$::cfg_path_zip,
-    'show_extracted'          => \$::cfg_show_extracted,
-    'strip_unknown_ext'       => \$::cfg_strip_unknown_ext,
-    'tmpdir_name'             => \$::cfg_tmpdir_name,
-    'tmpfile_name'            => \$::cfg_tmpfile_name,
-    'use_arc_for_unpack'      => \$::cfg_use_arc_for_unpack,
-    'use_arj_for_unpack'      => \$::cfg_use_arj_for_unpack,
-    'use_file'                => \$::cfg_use_file,
-    'use_file_always'         => \$::cfg_use_file_always,
-    'use_find_cpio_print0'    => \$::cfg_use_find_cpio_print0,
-    'use_gzip_for_z'          => \$::cfg_use_gzip_for_z,
-    'use_jar'                 => \$::cfg_use_jar,
-    'use_rar_for_unpack'      => \$::cfg_use_rar_for_unpack,
-    'use_rar_for_unrar'       => [ 'use_rar_for_unpack', \$::cfg_use_rar_for_unpack ],
-    'use_tar_bzip2_option'    => \$::cfg_use_tar_bzip2_option,
-    'use_tar_j_option'        => [ 'use_tar_bzip2_option', \$::cfg_use_tar_bzip2_option ],
-    'use_tar_z_option'        => \$::cfg_use_tar_z_option,
-    'use_pbzip2'              => \$::cfg_use_pbzip2,
-    'extract_deb_control'     => \$::cfg_extract_deb_control,
+    'args_diff'               => [ 'option', \$::cfg_args_diff, qr/.*/ ],
+    'decompress_to_cwd'       => [ 'option', \$::cfg_decompress_to_cwd, qr/^(0|1)$/ ],
+    'default_verbosity'       => [ 'option', \$::cfg_default_verbosity, qr/^\d+$/ ],
+    'extract_deb_control'     => [ 'option', \$::cfg_extract_deb_control, qr/^(0|1)$/ ],
+    'keep_compressed'         => [ 'option', \$::cfg_keep_compressed, qr/^(0|1)$/ ],
+    'path_7z'                 => [ 'option', \$::cfg_path_7z, qr/.*/ ],
+    'path_ar'                 => [ 'option', \$::cfg_path_ar, qr/.*/ ],
+    'path_arc'                => [ 'option', \$::cfg_path_arc, qr/.*/ ],
+    'path_arj'                => [ 'option', \$::cfg_path_arj, qr/.*/ ],
+    'path_bzip'               => [ 'option', \$::cfg_path_bzip, qr/.*/ ],
+    'path_bzip2'              => [ 'option', \$::cfg_path_bzip2, qr/.*/ ],
+    'path_cabextract'         => [ 'option', \$::cfg_path_cabextract, qr/.*/ ],
+    'path_cat'                => [ 'option', \$::cfg_path_cat, qr/.*/ ],
+    'path_compress'           => [ 'option', \$::cfg_path_compress, qr/.*/ ],
+    'path_cpio'               => [ 'option', \$::cfg_path_cpio, qr/.*/ ],
+    'path_diff'               => [ 'option', \$::cfg_path_diff, qr/.*/ ],
+    'path_dpkg_deb'           => [ 'option', \$::cfg_path_dpkg_deb, qr/.*/ ],
+    'path_file'               => [ 'option', \$::cfg_path_file, qr/.*/ ],
+    'path_find'               => [ 'option', \$::cfg_path_find, qr/.*/ ],
+    'path_gzip'               => [ 'option', \$::cfg_path_gzip, qr/.*/ ],
+    'path_jar'                => [ 'option', \$::cfg_path_jar, qr/.*/ ],
+    'path_lha'                => [ 'option', \$::cfg_path_lha, qr/.*/ ],
+    'path_lrzip'              => [ 'option', \$::cfg_path_lrzip, qr/.*/ ],
+    'path_lzip'               => [ 'option', \$::cfg_path_lzip, qr/.*/ ],
+    'path_lzma'               => [ 'option', \$::cfg_path_lzma, qr/.*/ ],
+    'path_lzop'               => [ 'option', \$::cfg_path_lzop, qr/.*/ ],
+    'path_nomarch'            => [ 'option', \$::cfg_path_nomarch, qr/.*/ ],
+    'path_pager'              => [ 'option', \$::cfg_path_pager, qr/.*/ ],
+    'path_pbzip2'             => [ 'option', \$::cfg_path_pbzip2, qr/.*/ ],
+    'path_rar'                => [ 'option', \$::cfg_path_rar, qr/.*/ ],
+    'path_rpm'                => [ 'option', \$::cfg_path_rpm, qr/.*/ ],
+    'path_rpm2cpio'           => [ 'option', \$::cfg_path_rpm2cpio, qr/.*/ ],
+    'path_rzip'               => [ 'option', \$::cfg_path_rzip, qr/.*/ ],
+    'path_tar'                => [ 'option', \$::cfg_path_tar, qr/.*/ ],
+    'path_unace'              => [ 'option', \$::cfg_path_unace, qr/.*/ ],
+    'path_unalz'              => [ 'option', \$::cfg_path_unalz, qr/.*/ ],
+    'path_unarj'              => [ 'option', \$::cfg_path_unarj, qr/.*/ ],
+    'path_unrar'              => [ 'option', \$::cfg_path_unrar, qr/.*/ ],
+    'path_unzip'              => [ 'option', \$::cfg_path_unzip, qr/.*/ ],
+    'path_usercfg'            => [ 'option', \$::cfg_path_usercfg, qr/.*/ ],
+    'path_xargs'              => [ 'option', \$::cfg_path_xargs, qr/.*/ ],
+    'path_xz'                 => [ 'option', \$::cfg_path_xz, qr/.*/ ],
+    'path_zip'                => [ 'option', \$::cfg_path_zip, qr/.*/ ],
+    'show_extracted'          => [ 'option', \$::cfg_show_extracted, qr/^(0|1)$/ ],
+    'strip_unknown_ext'       => [ 'option', \$::cfg_strip_unknown_ext, qr/^(0|1)$/ ],
+    'tmpdir_name'             => [ 'option', \$::cfg_tmpdir_name, qr/.*/ ],
+    'tmpfile_name'            => [ 'option', \$::cfg_tmpfile_name, qr/.*/ ],
+    'use_arc_for_unpack'      => [ 'option', \$::cfg_use_arc_for_unpack, qr/^(0|1)$/ ],
+    'use_arj_for_unpack'      => [ 'option', \$::cfg_use_arj_for_unpack, qr/^(0|1)$/ ],
+    'use_file'                => [ 'option', \$::cfg_use_file, qr/^(0|1)$/ ],
+    'use_file_always'         => [ 'option', \$::cfg_use_file_always, qr/^(0|1)$/ ],
+    'use_find_cpio_print0'    => [ 'option', \$::cfg_use_find_cpio_print0, qr/^(0|1)$/ ],
+    'use_gzip_for_z'          => [ 'option', \$::cfg_use_gzip_for_z, qr/^(0|1)$/ ],
+    'use_jar'                 => [ 'option', \$::cfg_use_jar, qr/^(0|1)$/ ],
+    'use_pbzip2'              => [ 'option', \$::cfg_use_pbzip2, qr/^(0|1)$/ ],
+    'use_rar_for_unpack'      => [ 'option', \$::cfg_use_rar_for_unpack, qr/^(0|1)$/ ],
+    'use_rar_for_unrar'       => [ 'obsolete', 'use_rar_for_unpack' ],
+    'use_tar_bzip2_option'    => [ 'option', \$::cfg_use_tar_bzip2_option, qr/^(0|1)$/ ],
+    'use_tar_lzma_option'     => [ 'option', \$::cfg_use_tar_lzma_option, qr/^(0|1)$/ ],
+    'use_tar_lzop_option'     => [ 'option', \$::cfg_use_tar_lzop_option, qr/^(0|1)$/ ],
+    'use_tar_xv_option'       => [ 'option', \$::cfg_use_tar_xv_option, qr/^(0|1)$/ ],
+    'use_tar_j_option'        => [ 'obsolete', 'use_tar_bzip2_option' ],
+    'use_tar_z_option'        => [ 'option', \$::cfg_use_tar_z_option, qr/^(0|1)$/ ],
   );
-  die $::basename,': ',$context,"unrecognized directive `$var'\n" if !exists $optionmap{$var};
+  die $::basename,': ',$context,'unrecognized directive `',$var,"'\n" if !exists $optionmap{$var};
   return 0 if !exists $optionmap{$var};
-  if (ref $optionmap{$var} eq 'ARRAY') {
-    my ($newopt,$newref) = @{$optionmap{$var}};
-    warn $context.$var.' is obsolete (use '.$newopt.')'."\n";
-    ${$newref} = $val;
-  } else {
-    ${$optionmap{$var}} = $val;
+  my ($type) = @{$optionmap{$var}};
+  if ($type eq 'obsolete') {
+    warn $context.$var.' is obsolete - use '.$optionmap{$var}->[1].')'."\n";
+    $var = $optionmap{$var}->[1];
   }
+  my ($varref,$check) = @{$optionmap{$var}}[1,2];
+  die $::basename,': ',$context,'invalid value for `',$var,"'\n" if $val !~ $check;
+  ${$varref} = $val;
   return 1;
 }
 
@@ -1599,12 +1681,16 @@ sub unlink_directory($) {
 sub find_comparable_file($) {
   my ($dir) = @_;
   my $result = $dir;
-  if (opendir(DIR, $dir)) {
-    my (@files) = map { readdir(DIR) } 0..3;
-    if (@files == 3 && $files[0] eq $::cur && $files[1] eq $::up) {
-      $result = File::Spec->catfile($dir, $files[2]);
+  if (opendir(my $dh, $dir)) {
+    my @files;
+    for (0..3) {
+      my $file = readdir($dh);
+      last if !defined $file;
+      next if $file eq '.' || $file eq '..';
+      push @files, $file;
     }
-    closedir(DIR);
+    closedir($dh);
+    $result = File::Spec->catfile($dir, $files[0]) if @files == 1;
   }
   return $result;
 }
@@ -1823,7 +1909,7 @@ sub repack_archive($$$$) {
   $outdir = makeoutdir() || exit 1;
   $::opt_cmd_extract_to = $outdir;
   $::opt_cmd_extract_to_type = 'd';
-  exit 1 if (!runcmds('extract-to', $fmt1, $file1));
+  exit 1 if !runcmds('extract-to', $fmt1, $file1);
   warn 'cd ',quote($outdir),"\n" if $::opt_explain || $::opt_simulate;
   if (!$::opt_simulate) {
     chdir($outdir) || die "$::basename: ".quote($outdir).": cannot change to - $!\n";
@@ -1833,9 +1919,9 @@ sub repack_archive($$$$) {
     # extracted to from the above execute-to command.
     #my $oldfile = stripext_exactly(basename($file1), $fmt1);
     my $oldfile = find_comparable_file($::cur); # FIXME: won't work in simulate mode
-    exit 1 if (!runcmds('add', $fmt2, $newarchive, $oldfile));
+    exit 1 if !runcmds('add', $fmt2, $newarchive, $oldfile);
   } else {
-    exit 1 if (!runcmds('add', $fmt2, $newarchive, $::cur));
+    exit 1 if !runcmds('add', $fmt2, $newarchive, $::cur);
   }
   warn 'cd ',quote($::up),"\n" if $::opt_explain || $::opt_simulate;
   if (!$::opt_simulate) {

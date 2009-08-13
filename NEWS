@@ -1,3 +1,15 @@
+2009-08-13: atool 0.37.0 released.
+  Added support for lzip and xz (suggested by Vincent Lefevre).
+  Fixed bug in arepack command with tar archives.
+  The number of bytes saved is now printed in 'repack' mode (suggested by
+  Meino Christian Cramer).
+  Don't use -U parameter (to delete original archive) for lzop.
+  Added link to ATrpms repository to home page.
+  Added support for GNU tar's --xv, --lzop, and --lzma options when the
+  corresponding atool options are enabled (use_tar_xv_option,
+  use_tar_lzop_option and use_tar_lzma_option).
+  Better checking of config file variables.
+
 2009-02-26: atool 0.36.0 released.
   Fix problem not identifying ZIP archives using file (from mollifier).
   Fix problem with escaping characters in UTF-8 locales.

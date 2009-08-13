@@ -1,18 +1,28 @@
-fIXME: apack foo.rar does not work properly due to -r?
+make use of modern tar options, like '--use-compress-program=prog'
+cfg_use_tar_compress_option?
 
+if making RPM, then upload SRPM as well!
 
-From Francois Marier <francois@debian.org>:
-  check if pbzip2 is in the path and use it
+improve messages printed from arepack. sometimes prints unnecessary messages like "data.tar.gz: extracted to `Unpack-2962/data'"
 
-if making RPM, then upload SRPM as well
+cat mode is not supported for lzop, because it won't write to standard out
+unless we give it the -f option. Because of this we use lzop as if -c was
+not supported. This should be fixed in the future.
 
----
-arepack should print how many bytes were saved for each archive, and in total (Meino Christian Cramer).
-fix FIXMEs in AUTHORS file
-improve messages printed from arepack.
----
-rewrite atool implement extract_archive  that is sensitive or not
----
+--no-umask option from Reuben
+
+aunpack -e is default - or perhaps with option to make it default?
+
+aremove tool
+  how it should work:
+    unpack archive to a separate directory
+    for each unpacked file, check if it exists and is the same in the current directory.
+    if yes, remove that file in the current directory, and (optionally) from unpacked directory as well.
+    if no, remove that file from the unpacked directory
+
+From Francois Marier <francois@debian.org>: check if pbzip2 is in the path and use it
+
+rewrite atool implement extract_archive that is sensitive or not
 
 add option to assume format with -F in some situations (like tar.gz)?
 add option to always assume -e? and add some option for the reverse (-s, --single)
@@ -31,13 +41,6 @@ add compression level control arguments: store (0) or 1-9
 make sure atool has non-zero rc when acat can't find a file (.arc files and possibly other)
 
 improve error message when some program doesn't exist (now gets unnecessary lines)
-
-complete arepack!!
-arepack to repack archives?
-  arepack existing.tar existing.zip?			OK done
-  arepack SOURCE DEST					OK done
-  arepack -F DESTFORMAT -e SOURCE1 SOURCE2..		dest format
-  arepack -e FORMAT SOURCE DEST				source format? ??
 
   arepack -F.tar.bz2 foo.tar.gz   would only gunzip then bzip2. tar not involved!
 
