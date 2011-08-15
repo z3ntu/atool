@@ -16,11 +16,11 @@ MAINTAINERCLEANFILES = $(script_old_files)
 dist_bin_SCRIPTS = $(script_files)
 
 $(script_stamp_files): .%-stamp: % $(srcdir)/configure.ac
-	touch $(notdir $<)
-	sed -r "1~s|[^ ]*|$(PERL_SHEBANG)|;/^\\$$::SYSCONFDIR = /s|'.*'|'$(SYSCONFDIR)'|;/^\\$$::PACKAGE = /s/'.*'/'$(PACKAGE)'/;/^\\$$::VERSION = /s/'.*'/'$(PACKAGE_VERSION)'/;/^\\$$::BUG_EMAIL = /s/'.*'/'$(PACKAGE_BUGREPORT)'/" < $< > $(notdir $<.tmp) \
-	  && mv $(notdir $<) .$(notdir $<-old) \
-	  && mv $(notdir $<.tmp) $(notdir $<)
-	chmod a+x $(notdir $<)
+	touch `basename "$<"`
+	sed "1s|[^ ]*|$(PERL_SHEBANG)|;/^\\$$::SYSCONFDIR = /s|'.*'|'$(SYSCONFDIR)'|;/^\\$$::PACKAGE = /s/'.*'/'$(PACKAGE)'/;/^\\$$::VERSION = /s/'.*'/'$(PACKAGE_VERSION)'/;/^\\$$::BUG_EMAIL = /s/'.*'/'$(PACKAGE_BUGREPORT)'/" < $< > `basename $<.tmp` \
+	  && mv `basename "$<"` .`basename "$<-old"` \
+	  && mv `basename "$<.tmp"` `basename "$<"`
+	chmod a+x `basename "$<"`
 	touch $@
 
 all-local: $(script_stamp_files)

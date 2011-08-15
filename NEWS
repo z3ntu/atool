@@ -1,3 +1,16 @@
+2011-08-15: atool 0.38.0 released.
+  Fix Mac OS X build time problem (reported by Dave Dribin): Don't use 'sed
+  -r' in makefiles, use 'sed' instead, etc.
+  Apply manpage typo fix patches (from Francois Marier).
+  Fixed bug preventing saved amount of data not to be printed with arepack.
+  Added -O, --format-option option for specifying archiver options.
+  Exit gracefully when specifying an unsupported formats with arepack.
+  Fix xv typo - should be xz (use_tar_xz_option etc) (from polemon).
+  Fix identification of .xpi files as zip (patch by Francois Marier,
+  Debian bug #530812).
+  Fix identification of 7zip files (patch by Bastian Kleineidam,
+  Debian bug #558003).
+
 2009-08-13: atool 0.37.0 released.
   Added support for lzip and xz (suggested by Vincent Lefevre).
   Fixed bug in arepack command with tar archives.

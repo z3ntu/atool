@@ -2,7 +2,7 @@
 .\" atool.1 - Manual page for atool.
 .\"
 .\" Copyright (C) 2001, 2002, 2003, 2004, 2005, 2007, 2008,
-.\" 2009 Oskar Liljeblad
+.\" 2009, 2011 Oskar Liljeblad
 .\"
 .\" This program is free software; you can redistribute it and/or modify
 .\" it under the terms of the GNU General Public License as published by
@@ -89,11 +89,11 @@ A summary of options is included below.
 .TP
 .B \-l, \-\-list
 List files in archive.
-This option is automaticly assumed when \fBals\fP is executed.
+This option is automatically assumed when \fBals\fP is executed.
 .TP
 .B \-x, \-\-extract
 Extract files from archive.
-This option is automaticly assumed when \fBaunpack\fP is executed.
+This option is automatically assumed when \fBaunpack\fP is executed.
 .TP
 .B \-X, \-\-extract-to\fR=\fIPATH\fR
 Extract files from archive to the specified directory. When
@@ -102,17 +102,17 @@ or an existing directory.
 .TP
 .B \-a, \-\-add
 Create archive.
-This option is automaticly assumed when \fBapack\fP is executed.
+This option is automatically assumed when \fBapack\fP is executed.
 .TP
 .B \-c, \-\-cat
 Extract a file from archive to standard out (displaying it on
 screen).
-This option is automaticly assumed when \fBacat\fP is executed.
+This option is automatically assumed when \fBacat\fP is executed.
 .TP
 .B \-d, \-\-diff
 Extract two archives and use diff(1) to generate differencies
 between them.
-This option is automaticly assumed when \fBadiff\fP is executed.
+This option is automatically assumed when \fBadiff\fP is executed.
 .TP
 .B \-e, \-\-each
 For each argument, execute the specified command. This can be used
@@ -189,6 +189,15 @@ Override a configuration option. These are applied after
 reading the configuration files.
 
 You can specify this multiple times to override different options.
+.TP
+
+.B \-O, \-\-format\-option\fR=\fIOPTION\fR
+Send additional options to the archiver command. This can be useful
+when specifying compression options for some archives, e.g.
+.br
+        \fBapack \-F7z \-O-mx=9 archive.7z dir\fP
+.br
+You can specify this multiple times add different options.
 .TP
 .B \-\-save\-outdir\fR=\fIFILE\fR
 When extracting files, save the name of the directory which
@@ -303,8 +312,8 @@ Cat, extract, and add commands are supported.
 Cat, extract, and add commands are supported.
 .TP
 .RI \fBlzop\fP " " ( .lzo )
-Extract and add commands are supported. The cat command is not suppored
-because lzop does not want to extract files to standard out unless the -f
+Extract and add commands are supported. The cat command is not supported
+because lzop does not want to extract files to standard out unless the \-f
 flag is given.
 .TP
 .RI \fBlzip\fP " " ( .lz )
@@ -382,10 +391,10 @@ Enable this if you use GNU tar and it supports the \fB\-\-lzop\fP option
 for filtering lzop compressed files through lzop. Versions 1.21
 or later of GNU tar support \fB\-\-lzop\fP.
 .TP
-.B use_tar_xv_option \fR(default: 0)\fR
-Enable this if you use GNU tar and it supports the \fB\-\-xv\fP option
-for filtering xv compressed files through xv. Versions 1.22
-or later of GNU tar support \fB\-\-xv\fP.
+.B use_tar_xz_option \fR(default: 0)\fR
+Enable this if you use GNU tar and it supports the \fB\-\-xz\fP option
+for filtering xz compressed files through xz. Versions 1.22
+or later of GNU tar support \fB\-\-xz\fP.
 .TP
 .B use_gzip_for_z \fR(default: 1)\fR
 Enable this if you want to use gzip instead of uncompress when
