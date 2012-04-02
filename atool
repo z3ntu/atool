@@ -3,7 +3,7 @@
 # atool - A script for managing file archives of various types.
 #
 # Copyright (C) 2001, 2002, 2003, 2004, 2005, 2007, 2008,
-# 2009, 2011 Oskar Liljeblad
+# 2009, 2011, 2012 Oskar Liljeblad
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -74,7 +74,7 @@ sub set_config_option($$$);
 
 $::SYSCONFDIR = '/usr/local/etc'; # This line is automatically updated by make
 $::PACKAGE = 'atool'; # This line is automatically updated by make
-$::VERSION = '0.38.0'; # This line is automatically updated by make
+$::VERSION = '0.39.0'; # This line is automatically updated by make
 $::BUG_EMAIL = 'oskar@osk.mine.nu'; # This line is automatically updated by make
 $::PROGRAM = $::PACKAGE;
 
@@ -100,18 +100,21 @@ $::cfg_path_file            = 'file';             # file program
 $::cfg_path_find            = 'find';             # find program
 $::cfg_path_gzip            = 'gzip';             # gzip program
 $::cfg_path_jar             = 'jar';              # jar program
+$::cfg_path_lbzip2          = 'lbzip2';           # lbzip2 program
 $::cfg_path_lha             = 'lha';              # lha program
-$::cfg_path_lrzip	    = 'lrzip';		  # lrzip program
+$::cfg_path_lrzip           = 'lrzip';            # lrzip program
 $::cfg_path_lzip            = 'lzip';             # lzip program
 $::cfg_path_lzma            = 'lzma';             # lzma program
 $::cfg_path_lzop            = 'lzop';             # lzop program
 $::cfg_path_nomarch         = 'nomarch';          # nomarch program
 $::cfg_path_pager           = 'pager';            # pager program
 $::cfg_path_pbzip2          = 'pbzip2';           # pbzip2 program
+$::cfg_path_pigz            = 'pigz';             # pigz program
+$::cfg_path_plzip           = 'plzip';            # plzip program
 $::cfg_path_rar             = 'rar';              # rar program
 $::cfg_path_rpm             = 'rpm';              # rpm program
 $::cfg_path_rpm2cpio        = 'rpm2cpio';         # rpm2cpio program
-$::cfg_path_rzip	    = 'rzip';		  # rzip program
+$::cfg_path_rzip            = 'rzip';             # rzip program
 $::cfg_path_syscfg          = File::Spec->catfile($::SYSCONFDIR, $::PROGRAM.'.conf');  # system-wide configuration file
 $::cfg_path_tar             = 'tar';              # tar program
 $::cfg_path_unace           = 'unace';            # unace program
@@ -134,10 +137,14 @@ $::cfg_use_file_always      = 0;                  # always use file to identify 
 $::cfg_use_find_cpio_print0 = 1;                  # use -print0/-0 find/cpio options?
 $::cfg_use_gzip_for_z       = 1;                  # use gzip to decompress .Z files?
 $::cfg_use_jar              = 0;                  # use jar or zip for .jar archives?
+$::cfg_use_lbzip2           = 0;                  # use lbzip2 instead of bzip2
 $::cfg_use_pbzip2           = 0;                  # use pbzip2 instead of bzip2
+$::cfg_use_pigz             = 0;                  # use pigz instead of gzip
+$::cfg_use_plzip            = 0;                  # use plzip instead of lzip
 $::cfg_use_rar_for_unpack   = 0;                  # use rar to unpack rar files?
 $::cfg_use_tar_bzip2_option = 1;                  # does tar support --bzip2?
 $::cfg_use_tar_lzma_option  = 1;                  # does tar support --lzma?
+$::cfg_use_tar_lzip_option  = 0;                  # does tar support --lzip?
 $::cfg_use_tar_lzop_option  = 0;                  # does tar support --lzop?
 $::cfg_use_tar_xz_option    = 0;                  # does tar support --xz?
 $::cfg_use_tar_z_option     = 1;                  # does tar support -z?
@@ -422,16 +429,24 @@ sub runcmds($$$;@) {
     if ($::cfg_use_tar_bzip2_option) {
       push @cmd, maketarcmd($archive, $outdir, $mode, 'f', '--bzip2'), @args;
     } elsif ($::cfg_use_pbzip2) {
-      if ($mode eq 'add') {
+      push @cmd, $::cfg_path_pbzip2, '-cd', $archive, ['|'] if $mode ne 'add';
+      push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
+      push @cmd, ['|'], $::cfg_path_pbzip2, '-c', ['>'], $archive if $mode eq 'add';
+      #if ($mode eq 'add') {
         # Unfortunately pbzip2 cannot read from standard in
-        my $tmpname = makeoutfile($::cfg_tmpfile_name);
-        push @cmd, maketarcmd($tmpname, $outdir, $mode, 'f'), @args;
-        push @cmd, [';'], $::cfg_path_pbzip2, '-c', $tmpname, ['>'], $archive;
-        push @cmd, [';'], 'rm', $tmpname;
-      } else {
-        push @cmd, $::cfg_path_pbzip2, '-cd', $archive, ['|'];
-        push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
-      }
+        # 2012-03-15: It seems now it does.
+      #  my $tmpname = makeoutfile($::cfg_tmpfile_name);
+      #  push @cmd, maketarcmd($tmpname, $outdir, $mode, 'f'), @args;
+      #  push @cmd, [';'], $::cfg_path_pbzip2, '-c', $tmpname, ['>'], $archive;
+      #  push @cmd, [';'], 'rm', $tmpname;
+      #} else {
+      #  push @cmd, $::cfg_path_pbzip2, '-cd', $archive, ['|'];
+      #  push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
+      #}
+    } elsif ($::cfg_use_lbzip2) {
+      push @cmd, $::cfg_path_lbzip2, '-cd', $archive, ['|'] if $mode ne 'add';
+      push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
+      push @cmd, ['|'], $::cfg_path_lbzip2, '-c', ['>'], $archive if $mode eq 'add';
     } else {
       push @cmd, $::cfg_path_bzip2, '-cd', $archive, ['|'] if $mode ne 'add';
       push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
@@ -444,6 +459,10 @@ sub runcmds($$$;@) {
     return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
     if ($::cfg_use_tar_z_option) {
       push @cmd, maketarcmd($archive, $outdir, $mode, 'zf'), @args;
+    } elsif ($::cfg_use_pigz) {
+      push @cmd, $::cfg_path_pigz, '-cd', $archive, ['|'] if $mode ne 'add';
+      push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
+      push @cmd, ['|'], $::cfg_path_pigz, '-c', ['>'], $archive if $mode eq 'add';
     } else {
       push @cmd, $::cfg_path_gzip, '-cd', $archive, ['|'] if $mode ne 'add';
       push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
@@ -486,9 +505,17 @@ sub runcmds($$$;@) {
   }
   elsif ($format eq 'tar+lzip') {
     return undef if ($mode eq 'extract' && !defined ($outdir = makeoutdir()));
-    push @cmd, $::cfg_path_lzip, '-cd', $archive, ['|'] if $mode ne 'add';
-    push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
-    push @cmd, ['|'], $::cfg_path_lzip, '-c', ['>'], $archive if $mode eq 'add';
+    if ($::cfg_use_tar_lzip_option) {
+      push @cmd, maketarcmd($archive, $outdir, $mode, 'f', '--lzip'), @args;
+    } elsif ($::cfg_use_plzip) {
+      push @cmd, $::cfg_path_plzip, '-cd', $archive, ['|'] if $mode ne 'add';
+      push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
+      push @cmd, ['|'], $::cfg_path_plzip, '-c', ['>'], $archive if $mode eq 'add';
+    } else {
+      push @cmd, $::cfg_path_lzip, '-cd', $archive, ['|'] if $mode ne 'add';
+      push @cmd, maketarcmd('-', $outdir, $mode, 'f'), @args;
+      push @cmd, ['|'], $::cfg_path_lzip, '-c', ['>'], $archive if $mode eq 'add';
+    }
     @cmd = handle_empty_add(@cmd) if ($mode eq 'add' && @args == 0);
     return multiarchivecmd($archive, $outdir, $mode, 1, 0, \@args, @cmd);
   }
@@ -817,13 +844,15 @@ sub runcmds($$$;@) {
     }
   }
   elsif ($format eq 'bzip2') {
-    return singlearchivecmd($archive, $::cfg_use_pbzip2 ? $::cfg_path_pbzip2 : $::cfg_path_bzip2, $format, $mode, 1, @args);
+    return singlearchivecmd($archive, $::cfg_path_pbzip2, $format, $mode, 1, @args) if $::cfg_use_pbzip2;
+    return singlearchivecmd($archive, $::cfg_path_lbzip2, $format, $mode, 1, @args) if $::cfg_use_lbzip2;
+    return singlearchivecmd($archive, $::cfg_path_bzip2, $format, $mode, 1, @args);
   }
   elsif ($format eq 'bzip') {
     return singlearchivecmd($archive, $::cfg_path_bzip, $format, $mode, 1, @args);
   }
   elsif ($format eq 'gzip') {
-    return singlearchivecmd($archive, $::cfg_path_gzip, $format, $mode, 1, @args);
+    return singlearchivecmd($archive, $::cfg_use_pigz ? $::cfg_path_pigz : $::cfg_path_gzip, $format, $mode, 1, @args);
   }
   elsif ($format eq 'compress') {
     if ($::cfg_use_gzip_for_z && $mode ne 'add') {
@@ -839,7 +868,7 @@ sub runcmds($$$;@) {
     return singlearchivecmd($archive, $::cfg_path_lzop, $format, $mode, 0, @args);
   }
   elsif ($format eq 'lzip') {
-    return singlearchivecmd($archive, $::cfg_path_lzip, $format, $mode, 1, @args);
+    return singlearchivecmd($archive, $::cfg_use_plzip ? $::cfg_path_plzip : $::cfg_path_lzip, $format, $mode, 1, @args);
   }
   elsif ($format eq 'xz') {
     return singlearchivecmd($archive, $::cfg_path_xz, $format, $mode, 1, @args);
@@ -1580,6 +1609,7 @@ sub set_config_option($$$) {
     'path_find'               => [ 'option', \$::cfg_path_find, qr/.*/ ],
     'path_gzip'               => [ 'option', \$::cfg_path_gzip, qr/.*/ ],
     'path_jar'                => [ 'option', \$::cfg_path_jar, qr/.*/ ],
+    'path_lbzip2'             => [ 'option', \$::cfg_path_lbzip2, qr/.*/ ],
     'path_lha'                => [ 'option', \$::cfg_path_lha, qr/.*/ ],
     'path_lrzip'              => [ 'option', \$::cfg_path_lrzip, qr/.*/ ],
     'path_lzip'               => [ 'option', \$::cfg_path_lzip, qr/.*/ ],
@@ -1588,6 +1618,8 @@ sub set_config_option($$$) {
     'path_nomarch'            => [ 'option', \$::cfg_path_nomarch, qr/.*/ ],
     'path_pager'              => [ 'option', \$::cfg_path_pager, qr/.*/ ],
     'path_pbzip2'             => [ 'option', \$::cfg_path_pbzip2, qr/.*/ ],
+    'path_pigz'               => [ 'option', \$::cfg_path_pigz, qr/.*/ ],
+    'path_plzip'              => [ 'option', \$::cfg_path_plzip, qr/.*/ ],
     'path_rar'                => [ 'option', \$::cfg_path_rar, qr/.*/ ],
     'path_rpm'                => [ 'option', \$::cfg_path_rpm, qr/.*/ ],
     'path_rpm2cpio'           => [ 'option', \$::cfg_path_rpm2cpio, qr/.*/ ],
@@ -1612,8 +1644,11 @@ sub set_config_option($$$) {
     'use_file_always'         => [ 'option', \$::cfg_use_file_always, qr/^(0|1)$/ ],
     'use_find_cpio_print0'    => [ 'option', \$::cfg_use_find_cpio_print0, qr/^(0|1)$/ ],
     'use_gzip_for_z'          => [ 'option', \$::cfg_use_gzip_for_z, qr/^(0|1)$/ ],
+    'use_lbzip2'              => [ 'option', \$::cfg_use_lbzip2, qr/^(0|1)$/ ],
     'use_jar'                 => [ 'option', \$::cfg_use_jar, qr/^(0|1)$/ ],
     'use_pbzip2'              => [ 'option', \$::cfg_use_pbzip2, qr/^(0|1)$/ ],
+    'use_pigz'                => [ 'option', \$::cfg_use_pigz, qr/^(0|1)$/ ],
+    'use_plzip'               => [ 'option', \$::cfg_use_plzip, qr/^(0|1)$/ ],
     'use_rar_for_unpack'      => [ 'option', \$::cfg_use_rar_for_unpack, qr/^(0|1)$/ ],
     'use_rar_for_unrar'       => [ 'obsolete', 'use_rar_for_unpack' ],
     'use_tar_bzip2_option'    => [ 'option', \$::cfg_use_tar_bzip2_option, qr/^(0|1)$/ ],

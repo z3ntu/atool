@@ -65,9 +65,9 @@ The following programs are required to run atool:
    atool is written in Perl. The modules File::Spec, File::Basename,
    Getopt::Long and POSIX must be available (they probably are by default).
 
-   site: http://www.perl.org/
+   Web site: http://www.perl.org/
 
-   package: perl
+   Debian package: perl
 
 The following programs are optional for running atool:
 
@@ -77,9 +77,9 @@ The following programs are optional for running atool:
    default. This program is necessary unless you choose to disable the
    use_file option.
 
-   site: ftp://ftp.astron.com/pub/file/
+   Web site: ftp://ftp.astron.com/pub/file/
 
-   package: file
+   Debian package: file
 
  * tar (GNU tar)
 
@@ -88,17 +88,17 @@ The following programs are optional for running atool:
    the Installation section below if you don't use GNU tar 1.13.18 or
    later.
 
-   site: http://www.gnu.org/software/tar/tar.html
+   Web site: http://www.gnu.org/software/tar/tar.html
 
-   package: tar
+   Debian package: tar
 
  * gzip (GNU zip)
 
    gzip is required if you want to use atool with gzip compressed archives.
 
-   site: http://www.gzip.org/
+   Web site: http://www.gzip.org/
 
-   package: gzip
+   Debian package: gzip
 
  * bzip
 
@@ -110,32 +110,58 @@ The following programs are optional for running atool:
    bzip2 is required if you want to use atool with bzip2 compressed
    archives.
 
-   site: http://www.bzip.org/
+   Web site: http://www.bzip.org/
 
-   package: bzip2
+   Debian package: bzip2
+
+ * pbzip2
+
+   pbzip2 is required if you want to use atool with bzip2 compressed
+   archives and utilize parallel processing.
+
+   Web site: http://compression.ca/pbzip2/
+
+   Debian package: pbzip2
+
+ * lzip
+
+   lzip is required if you want to use atool with lzip compressed archives.
+
+   Web site: http://lzip.nongnu.org/lzip.html
+
+   Debian package: lzip
+
+ * plzip
+
+   plzip is required if you want to use atool with lzip compressed archives
+   and utilize parallel processing.
+
+   Web site: http://lzip.nongnu.org/plzip.html
+
+   Debian package (not in stable as of 2012-02-07): plzip
 
  * lzop
 
    lzop is required if you want to use atool with lzop compressed archives.
 
-   site: http://www.lzop.org/
+   Web site: http://www.lzop.org/
 
-   package: lzop
+   Debian package: lzop
 
  * LZMA
 
    LZMA is required if you want to use atool with lzma compressed archives.
 
-   site: http://www.7-zip.org/sdk.html
+   Web site: http://www.7-zip.org/sdk.html
 
  * zip/unzip (Info-ZIP Zip/Unzip)
 
    Zip is required if you want to use atool with zip archives.
    Implementations other than Info-ZIP's might work with atool as well.
 
-   site: http://www.info-zip.org
+   Web site: http://www.info-zip.org
 
-   packages:zip, <c unzip
+   Debian packages: zip, unzip
 
  * rar (Eugene Roshal's RAR and UnRAR)
 
@@ -143,86 +169,86 @@ The following programs are optional for running atool:
    Implementations other than Eugene Roshal's might work with atool as
    well.
 
-   site: http://www.rarsoft.com/
+   Web site: http://www.rarsoft.com/
 
-   package: rar, unrar
+   Debian packages: rar, unrar
 
  * lha (LHa for UNIX)
 
    LHa is required if you want to use atool with lha, lharc and similar
    archives.
 
-   site: http://www.infor.kanazawa-it.ac.jp/~ishii/lhaunix/
+   Web site: http://www.infor.kanazawa-it.ac.jp/~ishii/lhaunix/
 
-   package: lha
+   Debian package: lha
 
  * unace (UnAce for Linux)
 
    UnAce is required if you want to use atool with ace archives.
 
-   site: http://www.winace.com
+   Web site: http://www.winace.com
 
-   package: unace
+   Debian package: unace
 
  * arj
 
    Arj is required if you want to use atool with arj archives.
 
-   site: http://arj.sourceforge.net
+   Web site: http://arj.sourceforge.net
 
-   package: arj
+   Debian package: arj
 
  * Red Hat Package Manager
 
    The Red Hat Package Manager is required if you want to use atool with
    rpm archives.
 
-   site: http://www.rpm.org/
+   Web site: http://www.rpm.org/
 
-   package: rpm
+   Debian package: rpm
 
  * cpio (GNU cpio)
 
    cpio is required if you want to use atool with cpio archives. Other
    implmentations than GNU's might work as well.
 
-   site: http://www.gnu.org/software/cpio/
+   Web site: http://www.gnu.org/software/cpio/
 
-   package: cpio
+   Debian package: cpio
 
  * arc
 
    arc is required if you want to use atool with ARC archives (all commands
    supported).
 
-   site: http://sources.isc.org/archiver/arc-5.21.txt
+   Web site: http://sources.isc.org/archiver/arc-5.21.txt
 
-   package: arc
+   Debian package: arc
 
  * nomarch
 
    nomarch is required if you want to use atool to list and extract files
    from ARC archives.
 
-   site: http://rus.members.beeb.net/nomarch.html
+   Web site: http://rus.members.beeb.net/nomarch.html
 
-   package: nomarch
+   Debian package: nomarch
 
  * p7zip
 
    p7zip is required if you want to use atool with 7z archives.
 
-   site: http://p7zip.sourceforge.net/
+   Web site: http://p7zip.sourceforge.net/
 
-   package: p7zip
+   Debian package: p7zip
 
  * unalz
 
    unalz is required if you want to use atool with alzip archives.
 
-   site: http://www.kipple.pe.kr/win/unalz/
+   Web site: http://www.kipple.pe.kr/win/unalz/
 
-   package: unalz
+   Debian package: unalz
 
 Building
 ========

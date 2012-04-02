@@ -42,7 +42,7 @@ atool \- A script for managing file archives of various types
 .RI [ OPTION ]... " ARCHIVE " "" ARCHIVE
 .br
 .B arepack
-.RI [ OPTION ]... OLD-ARCHIVE " " NEW-ARCHIVE
+.RI [ OPTION ]... " OLD-ARCHIVE " "" NEW-ARCHIVE
 .SH DESCRIPTION
 This manual page document describes the \fBatool\fP commands.
 These commands are used for managing file archives of various
@@ -369,6 +369,12 @@ GNU tar earlier than 1.13.6, you will need to disable this option.
 
 This used to be \fBuse_tar_j_option\fP but using \-\-bzip2 is more portable.
 .TP
+.B use_tar_lzip_option \fR(default: 0)\fR
+Enable this if you use GNU tar and it supports the \fB\-\-lzip\fP option
+for filtering lzip'ed files through lzip. Versions 1.23
+or later of GNU tar support \fB\-\-lzip\fP. Therefore, if you use
+GNU tar earlier than 1.23, you will need to disable this option.
+.TP
 .B use_tar_z_option \fR(default: 1)\fR
 Enable this if you use GNU tar and it supports the \fB\-z\fP option
 for filtering gzipped files through gzip. You will need to disable
@@ -442,6 +448,27 @@ bzip2 will be used by tar regardless of the use_pbzip2
 option. So if you want tar to use pbzip2 rather than bzip2,
 set use_pbzip2 to 1 and use_tar_bzip2_option to 0.
 .TP
+.B use_lbzip2 \fR(default: 0)\fR
+Enable this if you want to use lbzip2 rather than bzip2.
+Please not that if use_tar_bzip2_option is enabled, then
+bzip2 will be used by tar regardless of the use_lbzip2
+option. So if you want tar to use lbzip2 rather than bzip2,
+set use_lbzip2 to 1 and use_tar_bzip2_option to 0.
+.TP
+.B use_pigz \fR(default: 0)\fR
+Enable this if you want to use pigz rather than gzip.
+Please not that if use_tar_z_option is enabled, then
+gzip will be used by tar regardless of the use_pigz
+option. So if you want tar to use pigz rather than gzip,
+set use_pigz to 1 and use_tar_z_option to 0.
+.TP
+.B use_plzip \fR(default: 0)\fR
+Enable this if you want to use plzip rather than lzip.
+Please not that if use_tar_lzip_option is enabled, then
+lzip will be used by tar regardless of the use_plzip
+option. So if you want tar to use plzip rather than lzip,
+set use_plzip to 1 and use_tar_lzip_option to 0.
+.TP
 .B use_jar \fR(default: 0)\fR
 Enable this if you want to use jar for managing jar
 archives. If you disable this option, zip will be
@@ -506,6 +533,10 @@ See tmpdir_name for further details on the format.
 .B path_rar \fR(default: rar)\fR
 .TP
 .B path_unrar \fR(default: unrar)\fR
+.TP
+.B path_lbzip2 \fR(default: lbzip2)\fR
+.TP
+.B path_pigz \fR(default: pigz)\fR
 .TP
 .B path_cabextract \fR(default: cabextract)\fR
 .TP
@@ -687,7 +718,7 @@ Report bugs to <\fIoskar@osk.mine.nu\fP>.
 .SH AUTHOR
 The author of \fBatool\fP and this manual page is Oskar Liljeblad <\fIoskar@osk.mine.nu\fP>.
 .SH COPYRIGHT
-Copyright \(co 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009 Oskar Liljeblad
+Copyright \(co 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2011, 2012 Oskar Liljeblad
 
 This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

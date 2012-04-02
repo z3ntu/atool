@@ -1,3 +1,13 @@
+FIXME:
+ update web page and links etc
+---
+
+
+when repacking archives, don't specify '.'. Instead specify each extracted file or
+directory. (Jens Schleusener)
+
+---
+
 FIXME: implement -O fully! also, use if for compression only! or?
 
 ---

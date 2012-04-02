@@ -1,3 +1,10 @@
+2012-04-02: atool 0.39.0 released.
+  Add support for plzip, as well as --lzip in GNU tar 1.23 and later (patch
+  from Dan Serban).
+  Add support for lbzip2 and pigz (patch from Tim Harder).
+  Fix documentation typo (Debian #661636).
+  Updated links in README and on web page (thanks Antonio Diaz).
+
 2011-08-15: atool 0.38.0 released.
   Fix Mac OS X build time problem (reported by Dave Dribin): Don't use 'sed
   -r' in makefiles, use 'sed' instead, etc.

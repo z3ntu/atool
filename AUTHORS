@@ -13,4 +13,7 @@ Peter Valdemar Mørch
 Nick Matteo
  - patch for lzma support
 
+Dan Serban
+ - patch for plzip support, as well as --lzip in GNU tar 1.23 and later
+
 For other contributors, check out the NEWS file.
