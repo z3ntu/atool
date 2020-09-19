@@ -1540,7 +1540,7 @@ sub findformat($$) {
         warn "$::basename: ".quote($file).": format not known, identifying using file\n";
                         }
     }
-    my @cmd = ($::cfg_path_file, '-b', '-L', '-z', '--', $file);
+    my @cmd = ($::cfg_path_file, '-b', '-L', '-z', '-S', '--', $file);
     $spec = backticks(@cmd);
     if (!defined $spec) {
       warn "$::basename: $::errmsg\n";
