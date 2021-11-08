@@ -1128,7 +1128,7 @@ sub makeoutdir() {
 
   warn 'mkdir ', $dir, "\n" if $::opt_simulate || $::opt_explain;
   if (!$::opt_simulate) {
-    if (!mkdir($dir, 0700)) {
+    if (!mkdir($dir, 0777)) {
       warn "$::basename: ".quote($dir).": cannot create directory - $!\n";
       return undef;
     }
